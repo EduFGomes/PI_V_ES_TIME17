@@ -1,5 +1,8 @@
 class JogoDamas:
     def __init__(self):
+        self.resetar_jogo()
+
+    def resetar_jogo(self):
         self.tabuleiro = self.criar_tabuleiro_inicial()
         self.turno = 1
         self.peca_obrigatoria = None
@@ -175,3 +178,26 @@ class JogoDamas:
             return True, "Sucesso"
             
         return False, resultado
+    
+    def jogar(self, origem, destino):
+        sucesso, msg = self.mover_peca(origem, destino)
+
+        vencedor = None
+        mensagem_vitoria = None
+
+        print("MSG:", msg)
+        # só verifica vitória se jogada foi válida E terminou (não é captura múltipla)
+        if sucesso and msg != "Continua":
+            vencedor, mensagem_vitoria = self.verificar_vencedor()
+
+            if vencedor:
+                self.resetar_jogo()
+
+        return {
+            "sucesso": sucesso,
+            "mensagem": msg,
+            "vencedor": vencedor,
+            "mensagem_vitoria": mensagem_vitoria,
+            "tabuleiro": self.tabuleiro,
+            "turno": self.turno
+        }
