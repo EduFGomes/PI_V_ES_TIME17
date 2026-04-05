@@ -2,7 +2,7 @@
 
 ## CLONAR
 git clone URL  
-cd projeto
+cd ""
 
 ## BACKEND
 cd back-end  
