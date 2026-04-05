@@ -1,7 +1,7 @@
 # PI_V_ES_TIME17
 
 ## CLONAR
-git clone URL
+git clone URL  
 cd projeto
 
 ## BACKEND
