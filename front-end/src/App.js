@@ -55,6 +55,41 @@ function App() {
       });
   }
 
+  function jogadaIA() {
+    fetch("http://localhost:5000/ia_jogar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Erro no servidor ou IA não tem jogadas");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setTabuleiro(data.tabuleiro);
+        setTurno(data.turno);
+
+        if (data.vencedor !== null) {
+          alert(data.mensagem_vitoria);
+
+          // recarrega tabuleiro após reset
+          fetch("http://localhost:5000/tabuleiro")
+            .then((res) => res.json())
+            .then((data) => {
+              setTabuleiro(data.tabuleiro);
+              setTurno(data.turno);
+            });
+        }
+      })
+      .catch((err) => {
+        console.error("ERRO:", err);
+        alert("Erro ao realizar jogada da IA");
+      });
+  }
+
   return (
     <div
       style={{
@@ -65,6 +100,21 @@ function App() {
       }}
     >
       <h2>Turno: {turno === 1 ? "Brancas" : "Pretas"}</h2>
+      <button 
+        onClick={jogadaIA} 
+        style={{ 
+          marginBottom: 20, 
+          padding: "10px 20px", 
+          fontSize: "16px", 
+          cursor: "pointer",
+          backgroundColor: "#333",
+          color: "white",
+          border: "none",
+          borderRadius: "5px"
+        }}
+      >
+        Fazer Jogada da IA
+      </button>
 
       <div>
         {tabuleiro.map((linha, i) => (
