@@ -31,5 +31,13 @@ def mover():
 
     return jsonify(resultado)
 
+@app.route("/resetar", methods=["POST"])
+def resetar():
+    jogo.resetar_jogo()
+    return jsonify({
+        "tabuleiro": jogo.tabuleiro,
+        "turno": jogo.turno
+    })
+
 if __name__ == "__main__":
     app.run(debug=True)
