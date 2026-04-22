@@ -15,12 +15,14 @@ export default function Peca({ tipo, posicao, corPeca = "white", turno }) {
   // turno 1 = brancas jogam, turno 2 = pretas jogam
   const podeMover = (turno === 1 && isJogador1) || (turno === 2 && isJogador2);
 
-  const [{ isDragging }, drag] = useDrag(() => ({
+    const [{ isDragging }, drag] = useDrag(() => ({
     type: "PECA",
-    item: podeMover ? { posicao } : null,
+    item: { posicao }, // Não precisa do ternário aqui se o canDrag já filtra
     canDrag: () => podeMover,
-    collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
-  }));
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  }), [podeMover, posicao]); // <-- ADICIONE ESSAS DEPENDÊNCIAS AQUI!
 
   const bg = isJogador1
     ? GRADIENTES[corPeca] || GRADIENTES.white
