@@ -7,13 +7,23 @@ const GRADIENTES = {
   white: "radial-gradient(circle at 35% 30%, #fff, #ccc 60%, #888)",
 };
 
-export default function Peca({ tipo, posicao, corPeca = "white", turno }) {
+export default function Peca({ tipo, posicao, corPeca = "white", turno, iaPensando, pecaObrigatoria }) {
   const isJogador1 = tipo === 1 || tipo === 3;
   const isJogador2 = tipo === 2 || tipo === 4;
   const isDama = tipo === 3 || tipo === 4;
 
   // turno 1 = brancas jogam, turno 2 = pretas jogam
-  const podeMover = (turno === 1 && isJogador1) || (turno === 2 && isJogador2);
+  const ehBranca = tipo === 1 || tipo === 3;
+
+  const podeMover =
+    !iaPensando &&
+    turno === 1 &&
+    ehBranca &&
+    (
+      !pecaObrigatoria ||
+      (posicao[0] === pecaObrigatoria[0] &&
+      posicao[1] === pecaObrigatoria[1])
+    );
 
     const [{ isDragging }, drag] = useDrag(() => ({
     type: "PECA",

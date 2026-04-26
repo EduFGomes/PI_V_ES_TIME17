@@ -26,10 +26,6 @@ class JogoDamas:
         if pretas == 0:
             return 1, "Peças brancas venceram!"
         return None, "O jogo continua."
-    
-    def trocar_turno(self):
-        self.turno = 2 if self.turno == 1 else 1
-        print(f"Turno do jogador {self.turno}.")
 
     def criar_tabuleiro_inicial(self):
         tabuleiro = [
@@ -163,9 +159,9 @@ class JogoDamas:
                 _, linha_meio, coluna_meio = resultado
                 self.tabuleiro[linha_meio][coluna_meio] = 0
 
+                #VERIFICA SE TEM MAIS CAPTURA
                 if self.tem_capturas_disponiveis(linha_destino, coluna_destino):
                     self.peca_obrigatoria = (linha_destino, coluna_destino)
-                    print("Captura múltipla disponível! Continue capturando.")
                     return True, "Continua"
 
             if self.turno == 1 and linha_destino == 0 and peca == 1:
@@ -175,7 +171,7 @@ class JogoDamas:
 
             self.peca_obrigatoria = None
             self.turno = 2 if self.turno == 1 else 1
-            return True, "Sucesso"
+            return True, "SUCESSO"
             
         return False, resultado
     
@@ -199,5 +195,6 @@ class JogoDamas:
             "vencedor": vencedor,
             "mensagem_vitoria": mensagem_vitoria,
             "tabuleiro": self.tabuleiro,
-            "turno": self.turno
+            "turno": self.turno,
+            "peca_obrigatoria": self.peca_obrigatoria
         }

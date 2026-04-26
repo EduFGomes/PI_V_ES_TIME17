@@ -4,7 +4,9 @@ export default function Casa({ i, j, children, moverPeca, dicaAtiva }) {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "PECA",
     drop: (item) => {
-      moverPeca(item.posicao, [i, j]);
+      if (typeof moverPeca === "function") {
+        moverPeca(item.posicao, [i, j]);
+      }
     },
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
   }));
