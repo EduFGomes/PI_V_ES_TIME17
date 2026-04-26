@@ -16,7 +16,7 @@ const TELAS = {
 };
 
 const CORES_PECA = ["red", "black", "gold", "white"];
-const NIVEIS = ["FÁCIL", "MÉDIO", "DIFÍCIL"];
+const NIVEIS = ["DIVERTIDO", "AVENTUREIRO", "EXPERIENTE"];
 const TOTAL_PECAS_POR_LADO = 12;
 
 export default function App() {
@@ -100,6 +100,7 @@ export default function App() {
         setPecaObrigatoria(null);
         setDicaAtiva(false);
         setIaPensando(false);
+        setVencedorMsg("");
         setTela(TELAS.JOGO);
       });
   }
@@ -127,6 +128,7 @@ export default function App() {
 
         // se já venceu, para aqui
         if (d.vencedor !== null) {
+          setVencedorMsg(d.mensagem_vitoria || "");
           if (d.vencedor === 1) {
             tocarSomVitoria();
             spawnConfetes();
@@ -152,6 +154,19 @@ export default function App() {
           })
             .then((r) => r.json())
             .then((ia) => {
+              if (ia?.vencedor !== undefined && ia?.vencedor !== null) {
+                setIaPensando(false);
+                setVencedorMsg(ia.mensagem_vitoria || "");
+                if (ia.vencedor === 1) {
+                  tocarSomVitoria();
+                  spawnConfetes();
+                  setTela(TELAS.VITORIA);
+                } else {
+                  setTela(TELAS.DERROTA);
+                }
+                return;
+              }
+
               const caminho = ia?.caminho;
 
               if (!Array.isArray(caminho) || caminho.length < 2) {
@@ -174,6 +189,7 @@ export default function App() {
         setTurno(d.turno);
         setPecaObrigatoria(null);
         setDicaAtiva(false);
+        setVencedorMsg("");
         setTela(TELAS.JOGO);
       });
   }
@@ -251,6 +267,7 @@ export default function App() {
           // 🟢 SE terminou
           if (d.vencedor !== null) {
             setIaPensando(false);
+            setVencedorMsg(d.mensagem_vitoria || "");
 
             if (d.vencedor === 1) {
               tocarSomVitoria();
@@ -275,10 +292,6 @@ export default function App() {
     <div className="game-root">
       {/* Fundo céu */}
       <div className="sky-bg">
-        <div className="cloud" style={{ width: 90, height: 22, top: 30, left: "6%" }} />
-        <div className="cloud" style={{ width: 130, height: 28, top: 55, left: "25%" }} />
-        <div className="cloud" style={{ width: 80, height: 20, top: 25, left: "68%" }} />
-        <div className="cloud" style={{ width: 110, height: 26, top: 50, left: "75%" }} />
       </div>
 
       {/* Confetes */}
@@ -551,6 +564,7 @@ export default function App() {
             <div className="panel-title" style={{ fontSize: 32, color: "#c07800" }}>VITÓRIA</div>
             <div className="trophy">🏆</div>
             <div className="win-sub">VOCÊ VENCEU!</div>
+            {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
             <div className="btn-row">
               <button
                 className="btn green sm"
@@ -581,6 +595,7 @@ export default function App() {
             <div className="hearts">
             </div>
             <div className="lose-sub">O ADVERSÁRIO VENCEU DESTA VEZ</div>
+            {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
             <div className="btn-row">
               <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
               <button

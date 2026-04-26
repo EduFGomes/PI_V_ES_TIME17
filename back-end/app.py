@@ -15,13 +15,32 @@ PROFUNDIDADE_MAXIMA = {
     2: 5   # dificil
 }
 
+MARCOS_PROFUNDIDADE = {
+    # bonus de depth aplicado conforme fase.
+    # Exemplo facil:
+    # fases 1-3 => +0, 4-8 => +1, 9+ => +2
+    0: [(4, 1), (9, 2)],
+    1: [(5, 1), (9, 2)],
+    2: [(5, 1), (10, 2)],
+}
+
+
+def calcular_bonus_por_fase(nivel, fase):
+    marcos = MARCOS_PROFUNDIDADE.get(nivel, MARCOS_PROFUNDIDADE[1])
+    bonus = 0
+    for fase_inicio, bonus_depth in marcos:
+        if fase >= fase_inicio:
+            bonus = bonus_depth
+    return bonus
+
+
 def calcular_depth_real(nivel, fase_atual):
     nivel = int(nivel) if nivel is not None else 1
     fase = max(1, int(fase_atual) if fase_atual is not None else 1)
 
     base = PROFUNDIDADE_BASE.get(nivel, PROFUNDIDADE_BASE[1])
     limite = PROFUNDIDADE_MAXIMA.get(nivel, PROFUNDIDADE_MAXIMA[1])
-    progresso = (fase - 1) // 2  # sobe 1 depth a cada 2 fases
+    progresso = calcular_bonus_por_fase(nivel, fase)
 
     return min(base + progresso, limite)
 
@@ -61,6 +80,13 @@ def jogada_ia():
     nivel = data.get("nivel", 1)
     fase_atual = data.get("faseAtual", 1)
 
+    vencedor, mensagem_vitoria = jogo.verificar_vencedor()
+    if vencedor is not None:
+        return jsonify({
+            "vencedor": vencedor,
+            "mensagem_vitoria": mensagem_vitoria
+        })
+
     profundidade = calcular_depth_real(nivel, fase_atual)
     melhor = obter_melhor_jogada(jogo, profundidade, nivel=nivel, fase_atual=fase_atual)
 
@@ -68,7 +94,14 @@ def jogada_ia():
     print(f"IA nivel={nivel} fase={fase_atual} depth={profundidade}")
 
     if not melhor:
-        return jsonify({"erro": "IA não encontrou jogada"})
+        vencedor, mensagem_vitoria = jogo.verificar_vencedor()
+        if vencedor is None:
+            vencedor = 1 if jogo.turno == 2 else 2
+            mensagem_vitoria = "Sem movimentos disponíveis. Partida encerrada."
+        return jsonify({
+            "vencedor": vencedor,
+            "mensagem_vitoria": mensagem_vitoria
+        })
 
     caminho = melhor
 

@@ -3,35 +3,72 @@ import random
 
 PERFIS_IA = {
     0: {  # Facil
-        "erro_chance": 0.40,
+        "erro_chance": 0.45,
         "top_k": 4,
-        "agressividade": 0.8,
-        "valor_promocao": 6,
+        "agressividade": 0.75,
+        "valor_promocao": 5.0,
     },
     1: {  # Medio
-        "erro_chance": 0.22,
+        "erro_chance": 0.28,
         "top_k": 3,
-        "agressividade": 1.0,
-        "valor_promocao": 8,
+        "agressividade": 0.95,
+        "valor_promocao": 7.0,
     },
     2: {  # Dificil
-        "erro_chance": 0.12,
+        "erro_chance": 0.16,
         "top_k": 2,
-        "agressividade": 1.15,
-        "valor_promocao": 10,
+        "agressividade": 1.08,
+        "valor_promocao": 9.0,
+    },
+}
+
+ESCALA_PERFIL = {
+    0: {
+        "erro_step": 0.015,
+        "erro_min": 0.30,
+        "agress_step": 0.02,
+        "agress_max": 0.95,
+        "promo_step": 0.5,
+        "promo_max": 8.0,
+    },
+    1: {
+        "erro_step": 0.02,
+        "erro_min": 0.16,
+        "agress_step": 0.025,
+        "agress_max": 1.10,
+        "promo_step": 0.7,
+        "promo_max": 10.0,
+    },
+    2: {
+        "erro_step": 0.015,
+        "erro_min": 0.10,
+        "agress_step": 0.02,
+        "agress_max": 1.18,
+        "promo_step": 0.6,
+        "promo_max": 11.0,
     },
 }
 
 def obter_perfil_ia(nivel, fase_atual):
+    nivel = int(nivel) if nivel is not None else 1
     perfil_base = PERFIS_IA.get(nivel, PERFIS_IA[1]).copy()
+    escala = ESCALA_PERFIL.get(nivel, ESCALA_PERFIL[1])
     fase = max(1, int(fase_atual or 1))
 
-    # IA melhora suavemente a cada duas fases:
-    # menos erro e decisões um pouco mais agressivas.
+    # IA escala a cada duas fases, com curva mais suave por dificuldade.
     melhoria = min((fase - 1) // 2, 5)
-    perfil_base["erro_chance"] = max(0.05, perfil_base["erro_chance"] - 0.03 * melhoria)
-    perfil_base["agressividade"] = min(1.35, perfil_base["agressividade"] + 0.03 * melhoria)
-    perfil_base["valor_promocao"] = min(14, perfil_base["valor_promocao"] + melhoria)
+    perfil_base["erro_chance"] = max(
+        escala["erro_min"],
+        perfil_base["erro_chance"] - escala["erro_step"] * melhoria,
+    )
+    perfil_base["agressividade"] = min(
+        escala["agress_max"],
+        perfil_base["agressividade"] + escala["agress_step"] * melhoria,
+    )
+    perfil_base["valor_promocao"] = min(
+        escala["promo_max"],
+        perfil_base["valor_promocao"] + escala["promo_step"] * melhoria,
+    )
     return perfil_base
 
 def estimar_pontuacao_jogada(jogo_original, jogada, jogador_ia, perfil):

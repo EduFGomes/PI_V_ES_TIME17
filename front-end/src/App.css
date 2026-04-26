@@ -28,15 +28,18 @@
 .sky-bg {
   position: fixed;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    #1a4080 0%,
-    #3070b8 40%,
-    #5a9fda 65%,
-    #4a7c2f 82%,
-    #6b3f1e 100%
-  );
+  background-image: url("./assets/background_landscape.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: 0;
+}
+
+.sky-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 20, 32, 0.35), rgba(8, 12, 18, 0.55));
 }
 
 .cloud {

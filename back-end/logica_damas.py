@@ -25,7 +25,46 @@ class JogoDamas:
             return 2, "Peças pretas venceram!"
         if pretas == 0:
             return 1, "Peças brancas venceram!"
+        if not self.jogador_tem_movimentos(1):
+            return 2, "Brancas sem movimentos! Pretas venceram!"
+        if not self.jogador_tem_movimentos(2):
+            return 1, "Pretas sem movimentos! Brancas venceram!"
         return None, "O jogo continua."
+
+    def jogador_tem_movimentos(self, jogador):
+        if self.peca_obrigatoria:
+            linha, coluna = self.peca_obrigatoria
+            peca = self.tabuleiro[linha][coluna]
+            if (jogador == 1 and peca not in [1, 3]) or (jogador == 2 and peca not in [2, 4]):
+                return False
+            return self.tem_capturas_disponiveis(linha, coluna)
+
+        captura_obrigatoria = self.verificar_se_ha_capturas_obrigatorias(jogador)
+
+        for linha in range(8):
+            for coluna in range(8):
+                peca = self.tabuleiro[linha][coluna]
+                if (jogador == 1 and peca not in [1, 3]) or (jogador == 2 and peca not in [2, 4]):
+                    continue
+
+                is_dama = peca in [3, 4]
+
+                if captura_obrigatoria:
+                    if self.tem_capturas_disponiveis(linha, coluna):
+                        return True
+                    continue
+
+                distancias = range(1, 8) if is_dama else [1]
+                direcoes = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+                for d_linha, d_coluna in direcoes:
+                    for distancia in distancias:
+                        destino = (linha + d_linha * distancia, coluna + d_coluna * distancia)
+                        valido, _ = self.validar_movimento((linha, coluna), destino, jogador)
+                        if valido:
+                            return True
+
+        return False
 
     def criar_tabuleiro_inicial(self):
         tabuleiro = [
