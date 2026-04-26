@@ -82,8 +82,8 @@
 }
 
 .game-screen {
-  justify-content: flex-start;
-  padding-top: 20px;
+  justify-content: center;
+  padding: 20px;
 }
 
 /* ── PANEL ── */
@@ -258,10 +258,10 @@
   background: var(--panel-bg);
   border: 3px solid var(--panel-border);
   border-radius: 14px;
-  padding: 14px 14px 12px;
+  padding: 16px;
   box-shadow: 0 6px 24px #0005;
   width: 100%;
-  max-width: 420px;
+  max-width: 700px;
 }
 
 .turn-badge-wrap {
@@ -295,6 +295,8 @@
   border: 2px solid #8a5020;
   border-radius: 4px;
   overflow: hidden;
+  width: min(78vh, 78vw, 660px);
+  margin: 0 auto;
 }
 
 .board-btns {
@@ -302,6 +304,257 @@
   gap: 8px;
   justify-content: center;
   margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.game-layout {
+  width: 100%;
+  max-width: 1220px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.info-column {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.side-panel {
+  background: var(--panel-bg);
+  border: 3px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px #0004;
+  padding: 12px;
+}
+
+.side-title {
+  font-family: var(--label-font);
+  font-size: 16px;
+  color: #5a3010;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.adversario-img {
+  width: 100%;
+  max-width: 210px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #caa77d;
+  display: block;
+  margin: 0 auto 8px;
+  background: #efe4d8;
+}
+
+.phase-name {
+  font-family: var(--label-font);
+  color: #7a4618;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.counter {
+  font-family: var(--body-font);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+
+.counter.danger {
+  background: #ffe7e7;
+  border: 1px solid #f2b5b5;
+  color: #8c1e1e;
+}
+
+.counter.good {
+  background: #e8fae8;
+  border: 1px solid #bde4bd;
+  color: #1f6f1f;
+}
+
+.counter.neutral {
+  background: #f2f2ff;
+  border: 1px solid #cbcbf0;
+  color: #30307f;
+}
+
+.phase-legend {
+  font-family: var(--body-font);
+  color: #5a3010;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.phase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.phase-btn {
+  margin: 0;
+  font-size: 16px;
+  padding: 9px 10px;
+}
+
+.phase-btn.selected {
+  outline: 3px solid #ffe27a;
+}
+
+.phase-btn.current {
+  background: linear-gradient(180deg,#6cd44a,#3a9420);
+  box-shadow: 0 4px 0 #1e5810;
+}
+
+.phase-btn:disabled {
+  filter: grayscale(0.5);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.map-panel {
+  max-width: 560px;
+}
+
+.map-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 4px;
+}
+
+.map-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 82px;
+}
+
+.map-row.to-left {
+  justify-content: flex-start;
+}
+
+.map-row.to-right {
+  justify-content: flex-end;
+}
+
+.map-path {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% - 4px);
+  width: 8px;
+  height: 34px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #ffe27a, #d9b15b);
+  box-shadow: 0 1px 0 #fff7 inset, 0 2px 8px #0002;
+}
+
+.fase-node {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 3px solid #b57a2f;
+  background: radial-gradient(circle at 32% 30%, #ffdca2, #f0a030 65%, #bd6c18);
+  box-shadow: 0 5px 0 #8b4f14, 0 6px 16px #0003;
+  color: #fff;
+  font-family: var(--label-font);
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+}
+
+.fase-node:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.05);
+  filter: brightness(1.06);
+}
+
+.fase-node:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #8b4f14, 0 3px 8px #0002;
+}
+
+.fase-node .fase-icon {
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.fase-node.completed {
+  border-color: #2f8f1f;
+  background: radial-gradient(circle at 32% 30%, #d4ffbf, #62ce3d 66%, #2f8f1f);
+  box-shadow: 0 5px 0 #226d18, 0 6px 16px #0003;
+}
+
+.fase-node.current {
+  border-color: #1a65b8;
+  background: radial-gradient(circle at 32% 30%, #c0e9ff, #4da2ff 66%, #1a65b8);
+  box-shadow: 0 5px 0 #124c8a, 0 0 0 5px #a6d9ff80, 0 10px 20px #0004;
+  animation: currentPulse 1.3s ease-in-out infinite;
+}
+
+.fase-node.locked {
+  border-color: #6e6e6e;
+  background: radial-gradient(circle at 32% 30%, #dadada, #a4a4a4 66%, #777);
+  box-shadow: 0 5px 0 #5d5d5d, 0 6px 16px #0002;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
+
+.fase-node.selected:not(.locked) {
+  outline: 4px solid #fff2a6;
+  outline-offset: 2px;
+}
+
+.fase-info {
+  min-width: 108px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fffdf3d9;
+  border: 2px solid #e2ca9f;
+  box-shadow: 0 2px 8px #0001;
+}
+
+.fase-label {
+  font-family: var(--label-font);
+  color: #6f3e12;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.fase-status {
+  font-family: var(--body-font);
+  font-size: 12px;
+  margin-top: 3px;
+  color: #5b5b5b;
+  font-weight: 700;
+}
+
+.fase-extra-slot {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #a37b3b;
+  letter-spacing: 1px;
+}
+
+@keyframes currentPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
 }
 
 /* ── VITÓRIA ── */
@@ -372,4 +625,62 @@
   0% { opacity: 0.5; }
   50% { opacity: 1; }
   100% { opacity: 0.5; }
+}
+
+@media (max-width: 980px) {
+  .game-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .info-column {
+    max-width: 700px;
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .side-panel {
+    flex: 1;
+  }
+
+  .board {
+    width: min(82vw, 620px);
+  }
+}
+
+@media (max-width: 640px) {
+  .info-column {
+    flex-direction: column;
+  }
+
+  .map-row {
+    gap: 8px;
+  }
+
+  .fase-node {
+    width: 60px;
+    height: 60px;
+  }
+
+  .fase-node .fase-icon {
+    font-size: 18px;
+  }
+
+  .fase-info {
+    min-width: 92px;
+    padding: 6px 8px;
+  }
+
+  .fase-label {
+    font-size: 13px;
+  }
+
+  .fase-status {
+    font-size: 11px;
+  }
+
+  .board {
+    width: min(92vw, 500px);
+  }
 }

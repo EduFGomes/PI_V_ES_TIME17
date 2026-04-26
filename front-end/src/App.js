@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Peca from "./Peca";
 import Casa from "./Casa";
 import "./App.css";
@@ -17,6 +17,7 @@ const TELAS = {
 
 const CORES_PECA = ["red", "black", "gold", "white"];
 const NIVEIS = ["FÁCIL", "MÉDIO", "DIFÍCIL"];
+const TOTAL_PECAS_POR_LADO = 12;
 
 export default function App() {
   const [tela, setTela] = useState(TELAS.HOME);
@@ -28,9 +29,13 @@ export default function App() {
   const [confetes, setConfetes] = useState([]);
   const [dicaAtiva, setDicaAtiva] = useState(false);
   const [faseAtual, setFaseAtual] = useState(1);
+  const [faseSelecionada, setFaseSelecionada] = useState(1);
   const fases = Array.from({ length: 10 }, (_, i) => i + 1);
   const [iaPensando, setIaPensando] = useState(false);
   const [pecaObrigatoria, setPecaObrigatoria] = useState(null);
+  const [adversarioImgErro, setAdversarioImgErro] = useState(false);
+  const somMovimentoRef = useRef(null);
+  const somVitoriaRef = useRef(null);
 
   const carregarTabuleiro = useCallback(() => {
     fetch("http://localhost:5000/tabuleiro")
@@ -48,12 +53,56 @@ export default function App() {
 
   useEffect(() => {
     const salva = localStorage.getItem("faseAtual");
-    if (salva) setFaseAtual(Number(salva));
+    if (salva) {
+      const faseSalva = Number(salva);
+      setFaseAtual(faseSalva);
+      setFaseSelecionada(faseSalva);
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem("faseAtual", faseAtual);
   }, [faseAtual]);
+
+  useEffect(() => {
+    // Instancia os audios uma vez para evitar recriacao em cada render.
+    somMovimentoRef.current = new Audio("/sounds/moviment.mp3");
+    somVitoriaRef.current = new Audio("/sounds/win.mp3");
+  }, []);
+
+  function tocarSomMovimento() {
+    if (!somMovimentoRef.current) return;
+    somMovimentoRef.current.currentTime = 0;
+    somMovimentoRef.current.play().catch(() => {});
+  }
+
+  function tocarSomVitoria() {
+    if (!somVitoriaRef.current) return;
+    somVitoriaRef.current.currentTime = 0;
+    somVitoriaRef.current.play().catch(() => {});
+  }
+
+  const pecasBrancasNoTabuleiro = tabuleiro.flat().filter((p) => p === 1 || p === 3).length;
+  const pecasPretasNoTabuleiro = tabuleiro.flat().filter((p) => p === 2 || p === 4).length;
+  const capturadasPelaIA = TOTAL_PECAS_POR_LADO - pecasBrancasNoTabuleiro;
+  const capturadasPeloJogador = TOTAL_PECAS_POR_LADO - pecasPretasNoTabuleiro;
+  const nomeFase = `Fase ${faseSelecionada}`;
+  const caminhoImagemAdversario = `/adversarios/fase${faseSelecionada}.png`;
+
+  function iniciarFase(fase) {
+    setFaseSelecionada(fase);
+    setAdversarioImgErro(false);
+    fetch("http://localhost:5000/resetar", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => {
+        setTabuleiro(d.tabuleiro);
+        setTurno(d.turno);
+        setPecaObrigatoria(null);
+        setDicaAtiva(false);
+        setIaPensando(false);
+        setTela(TELAS.JOGO);
+      });
+  }
 
   function moverPeca(origem, destino) {
     fetch("http://localhost:5000/mover", {
@@ -64,6 +113,7 @@ export default function App() {
       .then((r) => r.json())
       .then((d) => {
         if (!d.sucesso) return;
+        tocarSomMovimento();
 
         // Sempre atualiza primeiro
         setTabuleiro(d.tabuleiro);
@@ -78,6 +128,7 @@ export default function App() {
         // se já venceu, para aqui
         if (d.vencedor !== null) {
           if (d.vencedor === 1) {
+            tocarSomVitoria();
             spawnConfetes();
             setTela(TELAS.VITORIA);
           } else {
@@ -97,7 +148,7 @@ export default function App() {
             headers: {
               "Content-Type": "application/json",
             }, 
-            body: JSON.stringify({ nivel, faseAtual }),
+            body: JSON.stringify({ nivel, faseAtual: faseSelecionada }),
           })
             .then((r) => r.json())
             .then((ia) => {
@@ -121,6 +172,7 @@ export default function App() {
       .then((d) => {
         setTabuleiro(d.tabuleiro);
         setTurno(d.turno);
+        setPecaObrigatoria(null);
         setDicaAtiva(false);
         setTela(TELAS.JOGO);
       });
@@ -183,6 +235,7 @@ export default function App() {
             setIaPensando(false);
             return;
           }
+          tocarSomMovimento();
 
           setTabuleiro(d.tabuleiro);
           setTurno(d.turno);
@@ -200,6 +253,7 @@ export default function App() {
             setIaPensando(false);
 
             if (d.vencedor === 1) {
+              tocarSomVitoria();
               spawnConfetes();
               setTela(TELAS.VITORIA);
             } else {
@@ -311,27 +365,49 @@ export default function App() {
     {/*TELA MAPA DE FASES*/}
       {tela === TELAS.MAPA && (
         <div className="screen">
-          <div className="panel">
+          <div className="panel map-panel">
             <div className="panel-title">Selecione a fase</div>
 
-            {fases.map((fase) => (
-              <button
-                key={fase}
-                className="btn"
-                disabled={fase !== faseAtual}
-                style={{
-                  opacity: fase === faseAtual ? 1 : 0.5,
-                  cursor: fase === faseAtual ? "pointer" : "not-allowed"
-                }}
-                onClick={() => {
-                  if (fase === faseAtual) {
-                    setTela(TELAS.JOGO);
-                  }
-                }}
-              >
-                Fase {fase}
-              </button>
-            ))}
+            <div className="phase-legend">
+              <span>Jogue qualquer fase já liberada.</span>
+              <span>Vença sua fase atual para avançar.</span>
+            </div>
+
+            <div className="map-container" aria-label="Mapa de progressão de fases">
+              {/* Trilha em estilo mobile/cartoon com nós conectados */}
+              {fases.map((fase, idx) => {
+                const desbloqueada = fase <= faseAtual;
+                const concluida = fase < faseAtual;
+                const atual = fase === faseAtual;
+                const selecionada = fase === faseSelecionada;
+                const isDireita = idx % 2 !== 0;
+                const deslocamento = isDireita ? "to-right" : "to-left";
+
+                return (
+                  <div key={fase} className={`map-row ${deslocamento}`}>
+                    <button
+                      className={`fase-node${concluida ? " completed" : ""}${atual ? " current" : ""}${!desbloqueada ? " locked" : ""}${selecionada ? " selected" : ""}`}
+                      disabled={!desbloqueada}
+                      title={desbloqueada ? `Entrar na Fase ${fase}` : "Fase bloqueada"}
+                      onClick={() => iniciarFase(fase)}
+                    >
+                      <span className="fase-icon">{desbloqueada ? `F${fase}` : "🔒"}</span>
+                    </button>
+
+                    <div className="fase-info">
+                      <div className="fase-label">Fase {fase}</div>
+                      <div className="fase-status">
+                        {concluida ? "Concluída" : atual ? "Atual" : "Bloqueada"}
+                      </div>
+                      {/* Espaço futuro: avatar adversário / estrelas */}
+                      <div className="fase-extra-slot">★ ★ ★</div>
+                    </div>
+
+                    {idx < fases.length - 1 && <div className="map-path" aria-hidden="true" />}
+                  </div>
+                );
+              })}
+            </div>
 
             <button className="btn gray sm" onClick={() => setTela(TELAS.COR)}>
               VOLTAR
@@ -366,7 +442,7 @@ export default function App() {
             ))}
             <div className="btn-row">
               <button className="btn gray sm" onClick={() => setTela(TELAS.HOME)}>VOLTAR</button>
-              <button className="btn green sm" onClick={() => setTela(TELAS.JOGO)}>CONFIRMAR</button>
+              <button className="btn green sm" onClick={() => iniciarFase(faseAtual)}>CONFIRMAR</button>
             </div>
           </div>
         </div>
@@ -398,7 +474,8 @@ export default function App() {
       {/* ── TELA DE JOGO ── */}
       {tela === TELAS.JOGO && (
         <div className="screen game-screen">
-          <div className="board-wrap">
+          <div className="game-layout">
+            <div className="board-wrap">
             {iaPensando && (
               <div className="thinking">
                 IA pensando...
@@ -442,6 +519,27 @@ export default function App() {
               <button className="btn red sm" onClick={desistir}>DESISTIR</button>
               <button className="btn gray sm" onClick={reiniciar}>REINICIAR</button>
             </div>
+            </div>
+
+            <aside className="info-column">
+              <div className="side-panel">
+                <div className="side-title">Adversário da fase</div>
+                <img
+                  className="adversario-img"
+                  src={adversarioImgErro ? "/adversarios/placeholder.svg" : caminhoImagemAdversario}
+                  alt={`Adversário da ${nomeFase}`}
+                  onError={() => setAdversarioImgErro(true)}
+                />
+                <div className="phase-name">{nomeFase}</div>
+                <div className="counter danger">Peças capturadas pela IA: <strong>{capturadasPelaIA}</strong></div>
+              </div>
+
+              <div className="side-panel">
+                <div className="side-title">Seu progresso na partida</div>
+                <div className="counter good">Peças capturadas por você: <strong>{capturadasPeloJogador}</strong></div>
+                <div className="counter neutral">Fase de progresso atual: <strong>{faseAtual}</strong></div>
+              </div>
+            </aside>
           </div>
         </div>
       )}
@@ -457,7 +555,13 @@ export default function App() {
               <button
                 className="btn green sm"
                 onClick={() => {
-                  setFaseAtual((f) => Math.min(f + 1, fases.length));
+                  if (faseSelecionada === faseAtual) {
+                    const proxima = Math.min(faseAtual + 1, fases.length);
+                    setFaseAtual(proxima);
+                    setFaseSelecionada(proxima);
+                  } else {
+                    setFaseSelecionada(faseAtual);
+                  }
                   setTela(TELAS.MAPA);
                 }}
               >
