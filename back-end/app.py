@@ -141,7 +141,12 @@ def executar_movimento():
 
 @app.route("/resetar", methods=["POST"])
 def resetar():
+    data = request.get_json() if request.is_json else {}
     jogo.resetar_jogo()
+    
+    if data and data.get("inverter"):
+        jogo.turno = 2
+
     return jsonify({
         "tabuleiro": jogo.tabuleiro,
         "turno": jogo.turno

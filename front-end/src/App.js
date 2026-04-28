@@ -3,6 +3,12 @@ import Peca from "./Peca";
 import Casa from "./Casa";
 import "./App.css";
 
+import bgLandscape from "./assets/background_landscape.jpg";
+import bgSunset from "./assets/background_landscape_sunset.jpg";
+import bgNight from "./assets/background_landscape_night.png";
+
+const BACKGROUNDS = [bgLandscape, bgSunset, bgNight];
+
 const TELAS = {
   HOME: "home",
   CONFIG: "config",
@@ -16,6 +22,12 @@ const TELAS = {
 };
 
 const CORES_PECA = ["red", "black", "gold", "white"];
+const NOMES_CORES_PT = {
+  red: "VERMELHAS",
+  black: "PRETAS",
+  gold: "AMARELAS",
+  white: "BRANCAS"
+};
 const NIVEIS = ["DIVERTIDO", "AVENTUREIRO", "EXPERIENTE"];
 const TOTAL_PECAS_POR_LADO = 12;
 
@@ -89,10 +101,52 @@ export default function App() {
   const nomeFase = `Fase ${faseSelecionada}`;
   const caminhoImagemAdversario = `/adversarios/fase${faseSelecionada}.png`;
 
+  function chamarIA(fase) {
+    setIaPensando(true);
+    const delay = 600 + Math.random() * 800;
+
+    setTimeout(() => {
+      fetch("http://localhost:5000/ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nivel, faseAtual: fase }),
+      })
+        .then((r) => r.json())
+        .then((ia) => {
+          if (ia?.vencedor !== undefined && ia?.vencedor !== null) {
+            setIaPensando(false);
+            setVencedorMsg(ia.mensagem_vitoria || "");
+            if (ia.vencedor === 1) {
+              tocarSomVitoria();
+              spawnConfetes();
+              setTela(TELAS.VITORIA);
+            } else {
+              setTela(TELAS.DERROTA);
+            }
+            return;
+          }
+
+          const caminho = ia?.caminho;
+
+          if (!Array.isArray(caminho) || caminho.length < 2) {
+            console.warn("IA retornou inválido:", ia);
+            setIaPensando(false);
+            return;
+          }
+
+          executarCaminhoIA([...caminho]);
+        });
+    }, delay);
+  }
+
   function iniciarFase(fase) {
     setFaseSelecionada(fase);
     setAdversarioImgErro(false);
-    fetch("http://localhost:5000/resetar", { method: "POST" })
+    fetch("http://localhost:5000/resetar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inverter: corPeca === "black" })
+    })
       .then((r) => r.json())
       .then((d) => {
         setTabuleiro(d.tabuleiro);
@@ -102,6 +156,10 @@ export default function App() {
         setIaPensando(false);
         setVencedorMsg("");
         setTela(TELAS.JOGO);
+
+        if (d.turno === 2) {
+          chamarIA(fase);
+        }
       });
   }
 
@@ -140,57 +198,29 @@ export default function App() {
         }
 
         //2. IA começa a pensar
-        setIaPensando(true);
-
-        const delay = 600 + Math.random() * 800;
-
-        setTimeout(() => {
-          fetch("http://localhost:5000/ia", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            }, 
-            body: JSON.stringify({ nivel, faseAtual: faseSelecionada }),
-          })
-            .then((r) => r.json())
-            .then((ia) => {
-              if (ia?.vencedor !== undefined && ia?.vencedor !== null) {
-                setIaPensando(false);
-                setVencedorMsg(ia.mensagem_vitoria || "");
-                if (ia.vencedor === 1) {
-                  tocarSomVitoria();
-                  spawnConfetes();
-                  setTela(TELAS.VITORIA);
-                } else {
-                  setTela(TELAS.DERROTA);
-                }
-                return;
-              }
-
-              const caminho = ia?.caminho;
-
-              if (!Array.isArray(caminho) || caminho.length < 2) {
-                console.warn("IA retornou inválido:", ia);
-                setIaPensando(false);
-                return;
-              }
-
-              executarCaminhoIA([...caminho]); // ✅ AQUI DENTRO
-            });
-        }, delay);
+        chamarIA(faseSelecionada);
       });
   }
 
   function reiniciar() {
-    fetch("http://localhost:5000/resetar", { method: "POST" })
+    fetch("http://localhost:5000/resetar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inverter: corPeca === "black" })
+    })
       .then((r) => r.json())
       .then((d) => {
         setTabuleiro(d.tabuleiro);
         setTurno(d.turno);
         setPecaObrigatoria(null);
         setDicaAtiva(false);
+        setIaPensando(false);
         setVencedorMsg("");
         setTela(TELAS.JOGO);
+
+        if (d.turno === 2) {
+          chamarIA(faseSelecionada);
+        }
       });
   }
 
@@ -291,7 +321,7 @@ export default function App() {
   return (
     <div className="game-root">
       {/* Fundo céu */}
-      <div className="sky-bg">
+      <div className="sky-bg" style={{ backgroundImage: `url(${BACKGROUNDS[nivel]})` }}>
       </div>
 
       {/* Confetes */}
@@ -498,9 +528,9 @@ export default function App() {
               <div className="turn-badge">
                 <div
                   className="turn-dot"
-                  style={{ background: turno === 1 ? "#eee" : "#222", border: "2px solid #0003" }}
+                  style={{ background: turno === 1 ? (corPeca === "red" ? "#ff4d4d" : corPeca === "gold" ? "#ffd700" : corPeca === "black" ? "#444" : "#eee") : "#222", border: "2px solid #0003" }}
                 />
-                <span>{turno === 1 ? "VEZ DAS BRANCAS" : "VEZ DAS PRETAS"}</span>
+                <span>{turno === 1 ? `VEZ DAS ${NOMES_CORES_PT[corPeca] || "BRANCAS"}` : (corPeca === "black" ? "VEZ DAS BRANCAS" : "VEZ DAS PRETAS")}</span>
               </div>
             </div>
 

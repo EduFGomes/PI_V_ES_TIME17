@@ -9,7 +9,7 @@ export default function Casa({ i, j, children, moverPeca, dicaAtiva }) {
       }
     },
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
-  }));
+  }), [moverPeca, i, j]);
 
   const isDark = (i + j) % 2 !== 0;
 

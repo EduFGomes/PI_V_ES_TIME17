@@ -34,9 +34,13 @@ export default function Peca({ tipo, posicao, corPeca = "white", turno, iaPensan
     }),
   }), [podeMover, posicao]); // <-- ADICIONE ESSAS DEPENDÊNCIAS AQUI!
 
+  const corAdversario = corPeca === "black" 
+    ? GRADIENTES.white 
+    : "radial-gradient(circle at 35% 30%, #555, #1a1a1a 60%, #000)";
+
   const bg = isJogador1
     ? GRADIENTES[corPeca] || GRADIENTES.white
-    : "radial-gradient(circle at 35% 30%, #555, #1a1a1a 60%, #000)";
+    : corAdversario;
 
   return (
     <div
