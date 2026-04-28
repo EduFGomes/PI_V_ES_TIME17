@@ -1,6 +1,6 @@
 import { useDrop } from "react-dnd";
 
-export default function Casa({ i, j, children, moverPeca, dicaAtiva }) {
+export default function Casa({ i, j, children, moverPeca, dicaAtiva, isOrigemDica, isDestinoDica }) {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "PECA",
     drop: (item) => {
@@ -16,6 +16,10 @@ export default function Casa({ i, j, children, moverPeca, dicaAtiva }) {
   let bg;
   if (isOver && isDark) {
     bg = "#90c050";
+  } else if (isDestinoDica && isDark) {
+    bg = "#80cc80"; // Verde indicando possível destino
+  } else if (isOrigemDica && isDark) {
+    bg = "#ffc040"; // Laranja/Amarelo indicando a peça que pode se mover
   } else if (isDark) {
     bg = "#c08040";
   } else {

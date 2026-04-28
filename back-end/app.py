@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from logica_damas import JogoDamas
-from ia_minimax import obter_melhor_jogada
+from ia_minimax import obter_melhor_jogada, gerar_jogadas_possiveis
 
 PROFUNDIDADE_BASE = {
     0: 1,  # facil
@@ -138,6 +138,13 @@ def executar_movimento():
         "mensagem_vitoria": mensagem_vitoria,
         "peca_obrigatoria": jogo.peca_obrigatoria
     })
+
+@app.route("/dicas", methods=["GET"])
+def dicas():
+    jogadas = gerar_jogadas_possiveis(jogo)
+    # Convertendo tuples para list para JSON
+    jogadas_lista = [[[o[0], o[1]], [d[0], d[1]]] for o, d in jogadas]
+    return jsonify({"dicas": jogadas_lista})
 
 @app.route("/resetar", methods=["POST"])
 def resetar():

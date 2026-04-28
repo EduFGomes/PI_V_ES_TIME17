@@ -40,6 +40,7 @@ export default function App() {
   const [vencedorMsg, setVencedorMsg] = useState("");
   const [confetes, setConfetes] = useState([]);
   const [dicaAtiva, setDicaAtiva] = useState(false);
+  const [jogadasPossiveis, setJogadasPossiveis] = useState([]);
   const [somLigado, setSomLigado] = useState(() => {
     const salvo = localStorage.getItem("somLigado");
     return salvo !== null ? JSON.parse(salvo) : true;
@@ -60,12 +61,27 @@ export default function App() {
         setTabuleiro(d.tabuleiro);
         setTurno(d.turno);
       })
-      .catch(() => {});
+      .catch(() => { });
+  }, []);
+
+  const fetchDicas = useCallback(() => {
+    fetch("http://localhost:5000/dicas")
+      .then((r) => r.json())
+      .then((d) => setJogadasPossiveis(d.dicas || []))
+      .catch(() => setJogadasPossiveis([]));
   }, []);
 
   useEffect(() => {
     if (tela === TELAS.JOGO) carregarTabuleiro();
   }, [tela, carregarTabuleiro]);
+
+  useEffect(() => {
+    if (dicaAtiva && turno === 1 && !iaPensando) {
+      fetchDicas();
+    } else if (!dicaAtiva) {
+      setJogadasPossiveis([]);
+    }
+  }, [dicaAtiva, turno, iaPensando, tabuleiro, fetchDicas]);
 
   useEffect(() => {
     const salva = localStorage.getItem("faseAtual");
@@ -93,13 +109,13 @@ export default function App() {
   function tocarSomMovimento() {
     if (!somLigado || !somMovimentoRef.current) return;
     somMovimentoRef.current.currentTime = 0;
-    somMovimentoRef.current.play().catch(() => {});
+    somMovimentoRef.current.play().catch(() => { });
   }
 
   function tocarSomVitoria() {
     if (!somLigado || !somVitoriaRef.current) return;
     somVitoriaRef.current.currentTime = 0;
-    somVitoriaRef.current.play().catch(() => {});
+    somVitoriaRef.current.play().catch(() => { });
   }
 
   const pecasBrancasNoTabuleiro = tabuleiro.flat().filter((p) => p === 1 || p === 3).length;
@@ -439,7 +455,7 @@ export default function App() {
         </div>
       )}
 
-    {/*TELA MAPA DE FASES*/}
+      {/*TELA MAPA DE FASES*/}
       {tela === TELAS.MAPA && (
         <div className="screen">
           <div className="panel map-panel">
@@ -498,7 +514,7 @@ export default function App() {
         <div className="screen">
           <div className="panel config-panel">
             <div className="panel-title">Configurações</div>
-            
+
             <div className="config-list">
               <div className="config-item">
                 <div className="config-info">
@@ -508,7 +524,7 @@ export default function App() {
                     <span>Sons de movimento e vitória</span>
                   </div>
                 </div>
-                <button 
+                <button
                   className={`toggle-btn ${somLigado ? "on" : "off"}`}
                   onClick={() => setSomLigado(!somLigado)}
                 >
@@ -578,49 +594,62 @@ export default function App() {
         <div className="screen game-screen">
           <div className="game-layout">
             <div className="board-wrap">
-            {iaPensando && (
-              <div className="thinking">
-                IA pensando...
-              </div>
-            )}
-            <div className="turn-badge-wrap">
-              <div className="turn-badge">
-                <div
-                  className="turn-dot"
-                  style={{ background: turno === 1 ? (corPeca === "red" ? "#ff4d4d" : corPeca === "gold" ? "#ffd700" : corPeca === "black" ? "#444" : "#eee") : "#222", border: "2px solid #0003" }}
-                />
-                <span>{turno === 1 ? `VEZ DAS ${NOMES_CORES_PT[corPeca] || "BRANCAS"}` : (corPeca === "black" ? "VEZ DAS BRANCAS" : "VEZ DAS PRETAS")}</span>
-              </div>
-            </div>
-
-            <div className="board">
-              {tabuleiro.map((linha, i) =>
-                linha.map((casa, j) => (
-                  <Casa key={`${i}-${j}`} i={i} j={j} moverPeca={
-                    !iaPensando && turno === 1
-                      ? moverPeca
-                      : () => { } // função vazia
-                  } dicaAtiva={dicaAtiva}>
-                    {casa !== 0 && <Peca
-                      tipo={casa}
-                      posicao={[i, j]}
-                      corPeca={corPeca}
-                      turno={turno}
-                      iaPensando={iaPensando}
-                      pecaObrigatoria={pecaObrigatoria}
-                    />}
-                  </Casa>
-                ))
+              {iaPensando && (
+                <div className="thinking">
+                  IA pensando...
+                </div>
               )}
-            </div>
+              <div className="turn-badge-wrap">
+                <div className="turn-badge">
+                  <div
+                    className="turn-dot"
+                    style={{ background: turno === 1 ? (corPeca === "red" ? "#ff4d4d" : corPeca === "gold" ? "#ffd700" : corPeca === "black" ? "#444" : "#eee") : "#222", border: "2px solid #0003" }}
+                  />
+                  <span>{turno === 1 ? `VEZ DAS ${NOMES_CORES_PT[corPeca] || "BRANCAS"}` : (corPeca === "black" ? "VEZ DAS BRANCAS" : "VEZ DAS PRETAS")}</span>
+                </div>
+              </div>
 
-            <div className="board-btns">
-              <button className="btn sm" onClick={mostrarDica}>
-                {dicaAtiva ? "OCULTAR" : "DICA"}
-              </button>
-              <button className="btn red sm" onClick={desistir}>DESISTIR</button>
-              <button className="btn gray sm" onClick={reiniciar}>REINICIAR</button>
-            </div>
+              <div className="board">
+                {tabuleiro.map((linha, i) =>
+                  linha.map((casa, j) => {
+                    const isOrigemDica = dicaAtiva && jogadasPossiveis.some(move => move[0][0] === i && move[0][1] === j);
+                    const isDestinoDica = dicaAtiva && jogadasPossiveis.some(move => move[1][0] === i && move[1][1] === j);
+
+                    return (
+                      <Casa
+                        key={`${i}-${j}`}
+                        i={i}
+                        j={j}
+                        moverPeca={
+                          !iaPensando && turno === 1
+                            ? moverPeca
+                            : () => { } // função vazia
+                        }
+                        dicaAtiva={dicaAtiva}
+                        isOrigemDica={isOrigemDica}
+                        isDestinoDica={isDestinoDica}
+                      >
+                        {casa !== 0 && (<Peca
+                          tipo={casa}
+                          posicao={[i, j]}
+                          corPeca={corPeca}
+                          turno={turno}
+                          iaPensando={iaPensando}
+                          pecaObrigatoria={pecaObrigatoria}
+                        />)}
+                      </Casa>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="board-btns">
+                <button className="btn sm" onClick={mostrarDica}>
+                  {dicaAtiva ? "OCULTAR" : "DICA"}
+                </button>
+                <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                <button className="btn gray sm" onClick={reiniciar}>REINICIAR</button>
+              </div>
             </div>
 
             <aside className="info-column">
