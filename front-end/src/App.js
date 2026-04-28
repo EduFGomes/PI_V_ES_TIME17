@@ -40,6 +40,10 @@ export default function App() {
   const [vencedorMsg, setVencedorMsg] = useState("");
   const [confetes, setConfetes] = useState([]);
   const [dicaAtiva, setDicaAtiva] = useState(false);
+  const [somLigado, setSomLigado] = useState(() => {
+    const salvo = localStorage.getItem("somLigado");
+    return salvo !== null ? JSON.parse(salvo) : true;
+  });
   const [faseAtual, setFaseAtual] = useState(1);
   const [faseSelecionada, setFaseSelecionada] = useState(1);
   const fases = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -77,19 +81,23 @@ export default function App() {
   }, [faseAtual]);
 
   useEffect(() => {
+    localStorage.setItem("somLigado", JSON.stringify(somLigado));
+  }, [somLigado]);
+
+  useEffect(() => {
     // Instancia os audios uma vez para evitar recriacao em cada render.
     somMovimentoRef.current = new Audio("/sounds/moviment.mp3");
     somVitoriaRef.current = new Audio("/sounds/win.mp3");
   }, []);
 
   function tocarSomMovimento() {
-    if (!somMovimentoRef.current) return;
+    if (!somLigado || !somMovimentoRef.current) return;
     somMovimentoRef.current.currentTime = 0;
     somMovimentoRef.current.play().catch(() => {});
   }
 
   function tocarSomVitoria() {
-    if (!somVitoriaRef.current) return;
+    if (!somLigado || !somVitoriaRef.current) return;
     somVitoriaRef.current.currentTime = 0;
     somVitoriaRef.current.play().catch(() => {});
   }
@@ -229,6 +237,27 @@ export default function App() {
       setVencedorMsg("O adversário venceu desta vez.");
       setFaseAtual(1);
       setTela(TELAS.DERROTA);
+    }
+  }
+
+  function resetarProgresso() {
+    if (window.confirm("Tem certeza que deseja apagar todo o seu progresso e voltar para a Fase 1?")) {
+      setFaseAtual(1);
+      setFaseSelecionada(1);
+      localStorage.removeItem("faseAtual");
+      alert("Progresso apagado com sucesso!");
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {
+        alert("Não foi possível entrar em modo tela cheia.");
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
     }
   }
 
@@ -467,38 +496,55 @@ export default function App() {
       {/* ── CONFIGURAÇÕES ── */}
       {tela === TELAS.CONFIG && (
         <div className="screen">
-          <div className="panel">
-            <div className="panel-title">Escolha sua peça</div>
-            <div className="piece-grid">
-              {CORES_PECA.map((cor) => (
-                <div
-                  key={cor}
-                  className={`piece-opt ${cor}${corPeca === cor ? " selected" : ""}`}
-                  onClick={() => setCorPeca(cor)}
-                />
-              ))}
+          <div className="panel config-panel">
+            <div className="panel-title">Configurações</div>
+            
+            <div className="config-list">
+              <div className="config-item">
+                <div className="config-info">
+                  <div className="config-icon">🔊</div>
+                  <div className="config-text">
+                    <strong>Efeitos Sonoros</strong>
+                    <span>Sons de movimento e vitória</span>
+                  </div>
+                </div>
+                <button 
+                  className={`toggle-btn ${somLigado ? "on" : "off"}`}
+                  onClick={() => setSomLigado(!somLigado)}
+                >
+                  <div className="toggle-knob" />
+                </button>
+              </div>
+
+              <div className="config-item">
+                <div className="config-info">
+                  <div className="config-icon">🖥️</div>
+                  <div className="config-text">
+                    <strong>Tela Cheia</strong>
+                    <span>Para não clicar fora sem querer</span>
+                  </div>
+                </div>
+                <button className="btn blue sm config-action" onClick={toggleFullscreen}>
+                  {document.fullscreenElement ? "SAIR" : "ENTRAR"}
+                </button>
+              </div>
+
+              <div className="config-item danger-zone">
+                <div className="config-info">
+                  <div className="config-icon">🗑️</div>
+                  <div className="config-text">
+                    <strong>Zerar Progresso</strong>
+                    <span>Voltar para a Fase 1</span>
+                  </div>
+                </div>
+                <button className="btn red sm config-action" onClick={resetarProgresso}>
+                  APAGAR
+                </button>
+              </div>
             </div>
 
-            {corPeca === "black" && (
-              <div className="hint-box">
-                <span style={{ fontSize: "20px" }}>🤖</span>
-                <p>Nesta cor, o computador joga primeiro!</p>
-              </div>
-            )}
-
-            <div className="panel-sub" style={{ marginTop: 6 }}>Nível</div>
-            {NIVEIS.map((n, i) => (
-              <button
-                key={n}
-                className={`lvl-btn ${["easy", "med", "hard"][i]}${nivel === i ? " active" : ""}`}
-                onClick={() => setNivel(i)}
-              >
-                {n}
-              </button>
-            ))}
-            <div className="btn-row">
-              <button className="btn gray sm" onClick={() => setTela(TELAS.HOME)}>VOLTAR</button>
-              <button className="btn green sm" onClick={() => iniciarFase(faseAtual)}>CONFIRMAR</button>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn gray" onClick={() => setTela(TELAS.HOME)}>VOLTAR</button>
             </div>
           </div>
         </div>
