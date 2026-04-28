@@ -398,6 +398,11 @@ export default function App() {
               ))}
             </div>
 
+            <div className="hint-box">
+              <span style={{ fontSize: "24px" }}>🤖</span>
+              <p>Dica: Escolhendo a peça <strong>PRETA</strong>, o computador faz a primeira jogada! Prepare-se!</p>
+            </div>
+
             <button className="btn gray sm" onClick={() => setTela(TELAS.DIFICULDADE)}>
               VOLTAR
             </button>
@@ -473,6 +478,14 @@ export default function App() {
                 />
               ))}
             </div>
+
+            {corPeca === "black" && (
+              <div className="hint-box">
+                <span style={{ fontSize: "20px" }}>🤖</span>
+                <p>Nesta cor, o computador joga primeiro!</p>
+              </div>
+            )}
+
             <div className="panel-sub" style={{ marginTop: 6 }}>Nível</div>
             {NIVEIS.map((n, i) => (
               <button
