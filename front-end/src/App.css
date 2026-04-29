@@ -86,6 +86,12 @@
 .game-screen {
   justify-content: center;
   padding: 20px;
+  overflow: visible;
+}
+
+.game-screen .game-layout {
+  padding-left: clamp(8px, 3vw, 80px);
+  padding-right: clamp(8px, 3vw, 80px);
 }
 
 /* ── PANEL ── */
@@ -284,7 +290,17 @@
 }
 
 /* ── TABULEIRO ── */
+.game-board-cluster {
+  --board-w: min(78vh, 78vw, 660px);
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  overflow: visible;
+}
+
 .board-wrap {
+  position: relative;
   background: var(--panel-bg);
   border: 3px solid var(--panel-border);
   border-radius: 14px;
@@ -292,6 +308,94 @@
   box-shadow: 0 6px 24px #0005;
   width: 100%;
   max-width: 700px;
+  overflow: visible;
+}
+
+.capture-float {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.capture-float--ia {
+  top: -10px;
+  left: -10px;
+  transform: translate(-100%, 0);
+  align-items: flex-end;
+}
+
+.capture-float--player {
+  right: -10px;
+  bottom: -10px;
+  transform: translate(100%, 0);
+  align-items: flex-start;
+}
+
+.capture-count {
+  font-family: var(--label-font);
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 8px #000c, 0 1px 2px #000a;
+}
+
+.pilha-capturas {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pilha-capturas__disc {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px #0006, inset 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.adversary-float {
+  position: absolute;
+  top: 6px;
+  right: -10px;
+  transform: translateX(100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  flex-shrink: 0;
+  max-width: 220px;
+  padding: 8px 4px;
+}
+
+.adversary-float-title,
+.adversary-phase-name {
+  font-family: var(--label-font);
+  color: #fff;
+  text-shadow: 0 2px 8px #000c, 0 1px 2px #000a;
+}
+
+.adversary-float-title {
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+
+.adversary-phase-name {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.adversary-progress {
+  font-family: var(--body-font);
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 6px #000a, 0 1px 2px #0008;
+  opacity: 0.95;
 }
 
 .turn-badge-wrap {
@@ -325,7 +429,7 @@
   border: 2px solid #8a5020;
   border-radius: 4px;
   overflow: hidden;
-  width: min(78vh, 78vw, 660px);
+  width: var(--board-w);
   margin: 0 auto;
 }
 
@@ -343,77 +447,20 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 22px;
-}
-
-.info-column {
-  width: 100%;
-  max-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.side-panel {
-  background: var(--panel-bg);
-  border: 3px solid var(--panel-border);
-  border-radius: 14px;
-  box-shadow: 0 6px 24px #0004;
-  padding: 12px;
-}
-
-.side-title {
-  font-family: var(--label-font);
-  font-size: 16px;
-  color: #5a3010;
-  margin-bottom: 8px;
-  text-align: center;
+  gap: 0;
 }
 
 .adversario-img {
   width: 100%;
-  max-width: 210px;
+  max-width: 200px;
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 12px;
   border: 2px solid #caa77d;
   display: block;
-  margin: 0 auto 8px;
+  margin: 0;
   background: #efe4d8;
-}
-
-.phase-name {
-  font-family: var(--label-font);
-  color: #7a4618;
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.counter {
-  font-family: var(--body-font);
-  font-size: 14px;
-  font-weight: 700;
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-top: 6px;
-}
-
-.counter.danger {
-  background: #ffe7e7;
-  border: 1px solid #f2b5b5;
-  color: #8c1e1e;
-}
-
-.counter.good {
-  background: #e8fae8;
-  border: 1px solid #bde4bd;
-  color: #1f6f1f;
-}
-
-.counter.neutral {
-  background: #f2f2ff;
-  border: 1px solid #cbcbf0;
-  color: #30307f;
+  box-shadow: 0 6px 20px #0004;
 }
 
 .phase-legend {
@@ -764,27 +811,25 @@
     align-items: center;
   }
 
-  .info-column {
-    max-width: 700px;
-    width: 100%;
-    flex-direction: row;
-    align-items: stretch;
+  .adversary-float {
+    position: static;
+    transform: none;
+    max-width: 280px;
+    margin: 8px auto 0;
   }
 
-  .side-panel {
-    flex: 1;
+  .game-board-cluster {
+    width: 100%;
+    max-width: 700px;
+    --board-w: min(82vw, 620px);
   }
 
   .board {
-    width: min(82vw, 620px);
+    width: var(--board-w);
   }
 }
 
 @media (max-width: 640px) {
-  .info-column {
-    flex-direction: column;
-  }
-
   .map-row {
     gap: 8px;
   }
@@ -811,7 +856,11 @@
     font-size: 11px;
   }
 
+  .game-board-cluster {
+    --board-w: min(92vw, 500px);
+  }
+
   .board {
-    width: min(92vw, 500px);
+    width: var(--board-w);
   }
 }

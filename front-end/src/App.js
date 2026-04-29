@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Peca from "./Peca";
+import PilhaCapturas from "./PilhaCapturas";
 import Casa from "./Casa";
 import "./App.css";
 
@@ -601,84 +602,87 @@ export default function App() {
       {tela === TELAS.JOGO && (
         <div className="screen game-screen">
           <div className="game-layout">
-            <div className="board-wrap">
-              {iaPensando && (
-                <div className="thinking">
-                  IA pensando...
-                </div>
-              )}
-              <div className="turn-badge-wrap">
-                <div className="turn-badge">
-                  <div
-                    className="turn-dot"
-                    style={{ background: turno === 1 ? (corPeca === "red" ? "#ff4d4d" : corPeca === "gold" ? "#ffd700" : corPeca === "black" ? "#444" : "#eee") : "#222", border: "2px solid #0003" }}
-                  />
-                  <span>{turno === 1 ? `VEZ DAS ${NOMES_CORES_PT[corPeca] || "BRANCAS"}` : (corPeca === "black" ? "VEZ DAS BRANCAS" : "VEZ DAS PRETAS")}</span>
-                </div>
-              </div>
-
-              <div className="board">
-                {tabuleiro.map((linha, i) =>
-                  linha.map((casa, j) => {
-                    const isOrigemDica = dicaAtiva && jogadasPossiveis.some(move => move[0][0] === i && move[0][1] === j);
-                    const isDestinoDica = dicaAtiva && jogadasPossiveis.some(move => move[1][0] === i && move[1][1] === j);
-
-                    return (
-                      <Casa
-                        key={`${i}-${j}`}
-                        i={i}
-                        j={j}
-                        moverPeca={
-                          !iaPensando && turno === 1
-                            ? moverPeca
-                            : () => { } // função vazia
-                        }
-                        dicaAtiva={dicaAtiva}
-                        isOrigemDica={isOrigemDica}
-                        isDestinoDica={isDestinoDica}
-                      >
-                        {casa !== 0 && (<Peca
-                          tipo={casa}
-                          posicao={[i, j]}
-                          corPeca={corPeca}
-                          turno={turno}
-                          iaPensando={iaPensando}
-                          pecaObrigatoria={pecaObrigatoria}
-                        />)}
-                      </Casa>
-                    );
-                  })
+            <div className="game-board-cluster">
+              <div className="board-wrap">
+                {iaPensando && (
+                  <div className="thinking">
+                    IA pensando...
+                  </div>
                 )}
-              </div>
+                <div className="turn-badge-wrap">
+                  <div className="turn-badge">
+                    <div
+                      className="turn-dot"
+                      style={{ background: turno === 1 ? (corPeca === "red" ? "#ff4d4d" : corPeca === "gold" ? "#ffd700" : corPeca === "black" ? "#444" : "#eee") : "#222", border: "2px solid #0003" }}
+                    />
+                    <span>{turno === 1 ? `VEZ DAS ${NOMES_CORES_PT[corPeca] || "BRANCAS"}` : (corPeca === "black" ? "VEZ DAS BRANCAS" : "VEZ DAS PRETAS")}</span>
+                  </div>
+                </div>
 
-              <div className="board-btns">
-                <button className="btn sm" onClick={mostrarDica}>
-                  {dicaAtiva ? "OCULTAR" : "DICA"}
-                </button>
-                <button className="btn red sm" onClick={desistir}>DESISTIR</button>
-                <button className="btn gray sm" onClick={reiniciar}>REINICIAR</button>
+                <div className="board">
+                  {tabuleiro.map((linha, i) =>
+                    linha.map((casa, j) => {
+                      const isOrigemDica = dicaAtiva && jogadasPossiveis.some(move => move[0][0] === i && move[0][1] === j);
+                      const isDestinoDica = dicaAtiva && jogadasPossiveis.some(move => move[1][0] === i && move[1][1] === j);
+
+                      return (
+                        <Casa
+                          key={`${i}-${j}`}
+                          i={i}
+                          j={j}
+                          moverPeca={
+                            !iaPensando && turno === 1
+                              ? moverPeca
+                              : () => { } // função vazia
+                          }
+                          dicaAtiva={dicaAtiva}
+                          isOrigemDica={isOrigemDica}
+                          isDestinoDica={isDestinoDica}
+                        >
+                          {casa !== 0 && (<Peca
+                            tipo={casa}
+                            posicao={[i, j]}
+                            corPeca={corPeca}
+                            turno={turno}
+                            iaPensando={iaPensando}
+                            pecaObrigatoria={pecaObrigatoria}
+                          />)}
+                        </Casa>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="board-btns">
+                  <button className="btn sm" onClick={mostrarDica}>
+                    {dicaAtiva ? "OCULTAR" : "DICA"}
+                  </button>
+                  <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                  <button className="btn gray sm" onClick={reiniciar}>REINICIAR</button>
+                </div>
+
+                <div className="capture-float capture-float--ia">
+                  <span className="capture-count" aria-label={`Peças capturadas pela IA: ${capturadasPelaIA}`}>{capturadasPelaIA}</span>
+                  <PilhaCapturas count={capturadasPelaIA} variant="ia" corPeca={corPeca} />
+                </div>
+                <div className="capture-float capture-float--player">
+                  <span className="capture-count" aria-label={`Peças capturadas por você: ${capturadasPeloJogador}`}>{capturadasPeloJogador}</span>
+                  <PilhaCapturas count={capturadasPeloJogador} variant="jogador" corPeca={corPeca} />
+                </div>
+
+                <div className="adversary-float">
+                  <div className="adversary-float-title">Adversário da fase</div>
+                  <img
+                    className="adversario-img"
+                    src={adversarioImgErro ? "/adversarios/placeholder.svg" : caminhoImagemAdversario}
+                    alt={`Adversário da ${nomeFase}`}
+                    onError={() => setAdversarioImgErro(true)}
+                  />
+                  <div className="adversary-phase-name">{nomeFase}</div>
+                  <div className="adversary-progress">Progresso: Fase {faseAtual}</div>
+                </div>
               </div>
             </div>
-
-            <aside className="info-column">
-              <div className="side-panel">
-                <div className="side-title">Adversário da fase</div>
-                <img
-                  className="adversario-img"
-                  src={adversarioImgErro ? "/adversarios/placeholder.svg" : caminhoImagemAdversario}
-                  alt={`Adversário da ${nomeFase}`}
-                  onError={() => setAdversarioImgErro(true)}
-                />
-                <div className="phase-name">{nomeFase}</div>
-                <div className="counter danger">Peças capturadas pela IA: <strong>{capturadasPelaIA}</strong></div>
-              </div>
-
-              <div className="side-panel">
-                <div className="side-title">Seu progresso na partida</div>
-                <div className="counter good">Peças capturadas por você: <strong>{capturadasPeloJogador}</strong></div>
-                <div className="counter neutral">Fase de progresso atual: <strong>{faseAtual}</strong></div>
-              </div>
-            </aside>
           </div>
         </div>
       )}

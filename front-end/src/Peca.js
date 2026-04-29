@@ -1,15 +1,20 @@
 import { useDrag } from "react-dnd";
 
-const GRADIENTES = {
+export const GRADIENTES = {
   red:   "radial-gradient(circle at 35% 30%, #ff8080, #cc2020 60%, #800000)",
   black: "radial-gradient(circle at 35% 30%, #888, #333 60%, #000)",
   gold:  "radial-gradient(circle at 35% 30%, #ffe066, #d4a000 60%, #7a5a00)",
   white: "radial-gradient(circle at 35% 30%, #fff, #ccc 60%, #888)",
 };
 
+export function gradientePecaAdversario(corPeca) {
+  return corPeca === "black"
+    ? GRADIENTES.white
+    : "radial-gradient(circle at 35% 30%, #555, #1a1a1a 60%, #000)";
+}
+
 export default function Peca({ tipo, posicao, corPeca = "white", turno, iaPensando, pecaObrigatoria }) {
   const isJogador1 = tipo === 1 || tipo === 3;
-  const isJogador2 = tipo === 2 || tipo === 4;
   const isDama = tipo === 3 || tipo === 4;
 
   // turno 1 = brancas jogam, turno 2 = pretas jogam
@@ -34,9 +39,7 @@ export default function Peca({ tipo, posicao, corPeca = "white", turno, iaPensan
     }),
   }), [podeMover, posicao]); // <-- ADICIONE ESSAS DEPENDÊNCIAS AQUI!
 
-  const corAdversario = corPeca === "black" 
-    ? GRADIENTES.white 
-    : "radial-gradient(circle at 35% 30%, #555, #1a1a1a 60%, #000)";
+  const corAdversario = gradientePecaAdversario(corPeca);
 
   const bg = isJogador1
     ? GRADIENTES[corPeca] || GRADIENTES.white
