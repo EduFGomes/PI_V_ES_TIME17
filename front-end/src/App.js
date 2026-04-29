@@ -3,6 +3,7 @@ import Peca from "./Peca";
 import PilhaCapturas from "./PilhaCapturas";
 import Casa from "./Casa";
 import "./App.css";
+import TutorialModal from "./TutorialModal";
 
 import bgLandscape from "./assets/background_landscape.jpg";
 import bgSunset from "./assets/background_landscape_sunset.jpg";
@@ -575,27 +576,9 @@ export default function App() {
         </div>
       )}
 
-      {/* ── COMO JOGAR ── */}
+      {/* ── COMO JOGAR (NOVO) ── */}
       {tela === TELAS.REGRAS && (
-        <div className="screen">
-          <div className="panel">
-            <div className="panel-title" style={{ fontSize: 24 }}>Regras do jogo</div>
-            {[
-              "Movimente suas peças na diagonal",
-              "Capture as peças do adversário pulando por cima delas",
-              "Transforme sua peça em Dama chegando ao outro lado do tabuleiro",
-              "Capture todas as peças adversárias para vencer!",
-            ].map((regra) => (
-              <div className="rule-item" key={regra}>
-                <div className="rule-check">✓</div>
-                <div className="rule-text">{regra}</div>
-              </div>
-            ))}
-            <button className="btn green" style={{ marginTop: 12 }} onClick={() => setTela(TELAS.HOME)}>
-              ENTENDI
-            </button>
-          </div>
-        </div>
+        <TutorialModal onClose={() => setTela(TELAS.HOME)} />
       )}
 
       {/* ── TELA DE JOGO ── */}
