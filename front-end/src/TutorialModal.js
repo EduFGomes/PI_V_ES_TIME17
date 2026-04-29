@@ -1,7 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ArrowUpRight, ArrowUpFromDot, Crown, Zap } from "lucide-react";
+import { X, Check } from "lucide-react";
 import { useDrag, useDrop } from "react-dnd";
+
+function sendDebugLog(payload) {
+  fetch("http://127.0.0.1:7682/ingest/006b32d1-80cd-4e64-a964-7f431c626e24", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "684460",
+    },
+    body: JSON.stringify({
+      sessionId: "684460",
+      timestamp: Date.now(),
+      ...payload,
+    }),
+  }).catch(() => {});
+}
+
+// #region agent log
+sendDebugLog({
+  runId: "run-1",
+  hypothesisId: "H2",
+  location: "TutorialModal.js:7",
+  message: "TutorialModal module loaded",
+  data: { importsResolved: true },
+});
+// #endregion
 
 const SLIDES = [
   {
@@ -96,6 +121,15 @@ function InteractiveBoard({ config, onComplete }) {
   const [concluido, setConcluido] = useState(false);
 
   useEffect(() => {
+    // #region agent log
+    sendDebugLog({
+      runId: "run-1",
+      hypothesisId: "H3",
+      location: "TutorialModal.js:119",
+      message: "InteractiveBoard reset state from slide config",
+      data: { slideId: config.id, start: config.start, target: config.target },
+    });
+    // #endregion
     setPecaPos(config.start);
     setEnemyPos(config.enemy);
     setIsDama(config.startIsDama || false);
@@ -104,6 +138,15 @@ function InteractiveBoard({ config, onComplete }) {
 
   const handleDrop = (r, c) => {
     if (r === config.target[0] && c === config.target[1]) {
+      // #region agent log
+      sendDebugLog({
+        runId: "run-1",
+        hypothesisId: "H4",
+        location: "TutorialModal.js:127",
+        message: "Valid tutorial move completed",
+        data: { slideId: config.id, drop: [r, c], target: config.target },
+      });
+      // #endregion
       setPecaPos([r, c]);
       setEnemyPos(null);
       if (config.becomesDama) setIsDama(true);
@@ -185,6 +228,18 @@ export default function TutorialModal({ onClose }) {
     centro: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 25 } },
     sair: (direcao) => ({ x: direcao < 0 ? 100 : -100, opacity: 0, transition: { duration: 0.2 } }),
   };
+
+  useEffect(() => {
+    // #region agent log
+    sendDebugLog({
+      runId: "run-1",
+      hypothesisId: "H1",
+      location: "TutorialModal.js:220",
+      message: "TutorialModal rendered",
+      data: { passoAtual, totalSlides: SLIDES.length },
+    });
+    // #endregion
+  }, [passoAtual]);
 
   return (
     <div className="tutorial-overlay">
