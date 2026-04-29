@@ -47,10 +47,19 @@ def calcular_depth_real(nivel, fase_atual):
 app = Flask(__name__)
 CORS(app)
 
-jogo = JogoDamas()
+sessoes = {}
+
+def obter_jogo(session_id):
+    if not session_id:
+        session_id = "default"
+    if session_id not in sessoes:
+        sessoes[session_id] = JogoDamas()
+    return sessoes[session_id]
 
 @app.route("/tabuleiro", methods=["GET"])
 def get_tabuleiro():
+    session_id = request.args.get("session_id")
+    jogo = obter_jogo(session_id)
     return jsonify({
         "tabuleiro": jogo.tabuleiro,
         "turno": jogo.turno
@@ -59,6 +68,8 @@ def get_tabuleiro():
 @app.route("/mover", methods=["POST"])
 def mover():
     data = request.get_json()
+    session_id = data.get("session_id")
+    jogo = obter_jogo(session_id)
 
     origem = data.get("origem")
     destino = data.get("destino")
@@ -77,6 +88,8 @@ def mover():
 @app.route("/ia", methods=["POST"])
 def jogada_ia():
     data = request.get_json()
+    session_id = data.get("session_id")
+    jogo = obter_jogo(session_id)
     nivel = data.get("nivel", 1)
     fase_atual = data.get("faseAtual", 1)
 
@@ -113,6 +126,8 @@ def jogada_ia():
 @app.route("/executar", methods=["POST"])
 def executar_movimento():
     data = request.get_json()
+    session_id = data.get("session_id")
+    jogo = obter_jogo(session_id)
 
     origem = tuple(data.get("origem"))
     destino = tuple(data.get("destino"))
@@ -141,6 +156,8 @@ def executar_movimento():
 
 @app.route("/dicas", methods=["GET"])
 def dicas():
+    session_id = request.args.get("session_id")
+    jogo = obter_jogo(session_id)
     jogadas = gerar_jogadas_possiveis(jogo)
     # Convertendo tuples para list para JSON
     jogadas_lista = [[[o[0], o[1]], [d[0], d[1]]] for o, d in jogadas]
@@ -149,6 +166,8 @@ def dicas():
 @app.route("/resetar", methods=["POST"])
 def resetar():
     data = request.get_json() if request.is_json else {}
+    session_id = data.get("session_id") if data else "default"
+    jogo = obter_jogo(session_id)
     jogo.resetar_jogo()
     
     if data and data.get("inverter"):

@@ -51,25 +51,33 @@ export default function App() {
   const [iaPensando, setIaPensando] = useState(false);
   const [pecaObrigatoria, setPecaObrigatoria] = useState(null);
   const [adversarioImgErro, setAdversarioImgErro] = useState(false);
+  const [sessionId] = useState(() => {
+    let id = localStorage.getItem("sessionId");
+    if (!id) {
+      id = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      localStorage.setItem("sessionId", id);
+    }
+    return id;
+  });
   const somMovimentoRef = useRef(null);
   const somVitoriaRef = useRef(null);
 
   const carregarTabuleiro = useCallback(() => {
-    fetch("http://localhost:5000/tabuleiro")
+    fetch(`http://localhost:5000/tabuleiro?session_id=${sessionId}`)
       .then((r) => r.json())
       .then((d) => {
         setTabuleiro(d.tabuleiro);
         setTurno(d.turno);
       })
       .catch(() => { });
-  }, []);
+  }, [sessionId]);
 
   const fetchDicas = useCallback(() => {
-    fetch("http://localhost:5000/dicas")
+    fetch(`http://localhost:5000/dicas?session_id=${sessionId}`)
       .then((r) => r.json())
       .then((d) => setJogadasPossiveis(d.dicas || []))
       .catch(() => setJogadasPossiveis([]));
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     if (tela === TELAS.JOGO) carregarTabuleiro();
@@ -133,7 +141,7 @@ export default function App() {
       fetch("http://localhost:5000/ia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nivel, faseAtual: fase }),
+        body: JSON.stringify({ nivel, faseAtual: fase, session_id: sessionId }),
       })
         .then((r) => r.json())
         .then((ia) => {
@@ -169,7 +177,7 @@ export default function App() {
     fetch("http://localhost:5000/resetar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inverter: corPeca === "black" })
+      body: JSON.stringify({ inverter: corPeca === "black", session_id: sessionId })
     })
       .then((r) => r.json())
       .then((d) => {
@@ -191,7 +199,7 @@ export default function App() {
     fetch("http://localhost:5000/mover", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origem, destino }),
+      body: JSON.stringify({ origem, destino, session_id: sessionId }),
     })
       .then((r) => r.json())
       .then((d) => {
@@ -230,7 +238,7 @@ export default function App() {
     fetch("http://localhost:5000/resetar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inverter: corPeca === "black" })
+      body: JSON.stringify({ inverter: corPeca === "black", session_id: sessionId })
     })
       .then((r) => r.json())
       .then((d) => {
@@ -317,7 +325,7 @@ export default function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ origem, destino }),
+        body: JSON.stringify({ origem, destino, session_id: sessionId }),
       })
         .then((r) => r.json())
         .then((d) => {
