@@ -31,6 +31,7 @@ const NOMES_CORES_PT = {
 };
 const NIVEIS = ["DIVERTIDO", "AVENTUREIRO", "EXPERIENTE"];
 const TOTAL_PECAS_POR_LADO = 12;
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function App() {
   const [tela, setTela] = useState(TELAS.HOME);
@@ -64,7 +65,7 @@ export default function App() {
   const somVitoriaRef = useRef(null);
 
   const carregarTabuleiro = useCallback(() => {
-    fetch(`http://localhost:5000/tabuleiro?session_id=${sessionId}`)
+    fetch(`${API_URL}/tabuleiro?session_id=${sessionId}`)
       .then((r) => r.json())
       .then((d) => {
         setTabuleiro(d.tabuleiro);
@@ -74,7 +75,7 @@ export default function App() {
   }, [sessionId]);
 
   const fetchDicas = useCallback(() => {
-    fetch(`http://localhost:5000/dicas?session_id=${sessionId}`)
+    fetch(`${API_URL}/dicas?session_id=${sessionId}`)
       .then((r) => r.json())
       .then((d) => setJogadasPossiveis(d.dicas || []))
       .catch(() => setJogadasPossiveis([]));
@@ -139,7 +140,7 @@ export default function App() {
     const delay = 600 + Math.random() * 800;
 
     setTimeout(() => {
-      fetch("http://localhost:5000/ia", {
+      fetch(`${API_URL}/ia`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nivel, faseAtual: fase, session_id: sessionId }),
@@ -175,7 +176,7 @@ export default function App() {
   function iniciarFase(fase) {
     setFaseSelecionada(fase);
     setAdversarioImgErro(false);
-    fetch("http://localhost:5000/resetar", {
+    fetch(`${API_URL}/resetar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ inverter: corPeca === "black", session_id: sessionId })
@@ -197,7 +198,7 @@ export default function App() {
   }
 
   function moverPeca(origem, destino) {
-    fetch("http://localhost:5000/mover", {
+    fetch(`${API_URL}/mover`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ origem, destino, session_id: sessionId }),
@@ -236,7 +237,7 @@ export default function App() {
   }
 
   function reiniciar() {
-    fetch("http://localhost:5000/resetar", {
+    fetch(`${API_URL}/resetar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ inverter: corPeca === "black", session_id: sessionId })
@@ -321,7 +322,7 @@ export default function App() {
       const origem = caminho[i];
       const destino = caminho[i + 1];
 
-      fetch("http://localhost:5000/executar", {
+      fetch(`${API_URL}/executar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
