@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Peca from "./Peca";
 import PilhaCapturas from "./PilhaCapturas";
 import Casa from "./Casa";
@@ -33,6 +33,8 @@ const NOMES_CORES_PT = {
 const NIVEIS = ["DIVERTIDO", "AVENTUREIRO", "EXPERIENTE"];
 const TOTAL_PECAS_POR_LADO = 12;
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const X_COORDS = ["a", "b", "c", "d", "e", "f", "g", "h"];
+const Y_COORDS = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
 export default function App() {
   const [tela, setTela] = useState(TELAS.HOME);
@@ -54,6 +56,10 @@ export default function App() {
   const [iaPensando, setIaPensando] = useState(false);
   const [pecaObrigatoria, setPecaObrigatoria] = useState(null);
   const [adversarioImgErro, setAdversarioImgErro] = useState(false);
+  const [configJogoAberta, setConfigJogoAberta] = useState(false);
+  const [boardSize, setBoardSize] = useState(0);
+  const [dragState, setDragState] = useState(null);
+  const [dropTransition, setDropTransition] = useState(null);
   const [sessionId] = useState(() => {
     let id = localStorage.getItem("sessionId");
     if (!id) {
@@ -64,6 +70,8 @@ export default function App() {
   });
   const somMovimentoRef = useRef(null);
   const somVitoriaRef = useRef(null);
+  const boardAreaRef = useRef(null);
+  const moverPecaRef = useRef(null);
 
   const carregarTabuleiro = useCallback(() => {
     fetch(`${API_URL}/tabuleiro?session_id=${sessionId}`)
@@ -87,12 +95,17 @@ export default function App() {
   }, [tela, carregarTabuleiro]);
 
   useEffect(() => {
-    if (dicaAtiva && turno === 1 && !iaPensando) {
-      fetchDicas();
-    } else if (!dicaAtiva) {
+    if (tela !== TELAS.JOGO) {
       setJogadasPossiveis([]);
+      setConfigJogoAberta(false);
+      return;
     }
-  }, [dicaAtiva, turno, iaPensando, tabuleiro, fetchDicas]);
+    if (turno === 1 && !iaPensando) {
+      fetchDicas();
+      return;
+    }
+    setJogadasPossiveis([]);
+  }, [tela, turno, iaPensando, tabuleiro, fetchDicas]);
 
   useEffect(() => {
     const salva = localStorage.getItem("faseAtual");
@@ -117,6 +130,98 @@ export default function App() {
     somVitoriaRef.current = new Audio("/sounds/win.mp3");
   }, []);
 
+  useEffect(() => {
+    if (!boardAreaRef.current) return;
+
+    const updateBoardSize = () => {
+      const width = boardAreaRef.current?.getBoundingClientRect().width ?? 0;
+      setBoardSize(width);
+    };
+
+    updateBoardSize();
+    const resizeObserver = new ResizeObserver(updateBoardSize);
+    resizeObserver.observe(boardAreaRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [tela]);
+
+  const tileSize = useMemo(() => (boardSize > 0 ? boardSize / 8 : 0), [boardSize]);
+  const interactionLocked = iaPensando || !!dropTransition;
+
+  const boardToPixel = useCallback((i, j) => ({
+    x: j * tileSize,
+    y: i * tileSize,
+  }), [tileSize]);
+
+  const canDragPiece = useCallback((tipo, posicao) => {
+    const ehBranca = tipo === 1 || tipo === 3;
+    return (
+      !interactionLocked &&
+      turno === 1 &&
+      ehBranca &&
+      (
+        !pecaObrigatoria ||
+        (posicao[0] === pecaObrigatoria[0] && posicao[1] === pecaObrigatoria[1])
+      )
+    );
+  }, [interactionLocked, turno, pecaObrigatoria]);
+
+  const isCaptureMove = useCallback((origem, destino) => {
+    if (!Array.isArray(origem) || !Array.isArray(destino)) return false;
+    const [oi, oj] = origem;
+    const [di, dj] = destino;
+    const deltaI = di - oi;
+    const deltaJ = dj - oj;
+
+    if (Math.abs(deltaI) < 2 || Math.abs(deltaJ) < 2 || Math.abs(deltaI) !== Math.abs(deltaJ)) {
+      return false;
+    }
+
+    const stepI = deltaI > 0 ? 1 : -1;
+    const stepJ = deltaJ > 0 ? 1 : -1;
+    const origemTipo = tabuleiro[oi]?.[oj];
+    if (!origemTipo) return false;
+
+    const inimigos = origemTipo === 1 || origemTipo === 3 ? [2, 4] : [1, 3];
+    let encontrouInimigo = false;
+
+    for (let k = 1; k < Math.abs(deltaI); k++) {
+      const ti = oi + stepI * k;
+      const tj = oj + stepJ * k;
+      const casa = tabuleiro[ti]?.[tj] ?? 0;
+      if (casa === 0) continue;
+      if (!inimigos.includes(casa)) return false;
+      if (encontrouInimigo) return false;
+      encontrouInimigo = true;
+    }
+    return encontrouInimigo;
+  }, [tabuleiro]);
+
+  const captureOrigins = useMemo(() => {
+    const set = new Set();
+    jogadasPossiveis.forEach((move) => {
+      const origem = move?.[0];
+      const destino = move?.[1];
+      if (isCaptureMove(origem, destino)) {
+        set.add(`${origem[0]}-${origem[1]}`);
+      }
+    });
+    return set;
+  }, [jogadasPossiveis, isCaptureMove]);
+
+  const pieces = useMemo(() => {
+    const data = [];
+    tabuleiro.forEach((linha, i) => {
+      linha.forEach((tipo, j) => {
+        if (!tipo) return;
+        if (dragState && dragState.origem[0] === i && dragState.origem[1] === j) return;
+        if (dropTransition && dropTransition.origem[0] === i && dropTransition.origem[1] === j) return;
+        data.push({ id: `${i}-${j}`, tipo, posicao: [i, j] });
+      });
+    });
+    return data;
+  }, [tabuleiro, dragState, dropTransition]);
+
   function tocarSomMovimento() {
     if (!somLigado || !somMovimentoRef.current) return;
     somMovimentoRef.current.currentTime = 0;
@@ -128,6 +233,83 @@ export default function App() {
     somVitoriaRef.current.currentTime = 0;
     somVitoriaRef.current.play().catch(() => { });
   }
+
+  const iniciarDrag = useCallback((event, piece) => {
+    if (!tileSize || !boardAreaRef.current || !canDragPiece(piece.tipo, piece.posicao)) return;
+    event.preventDefault();
+    const rect = boardAreaRef.current.getBoundingClientRect();
+    const [i, j] = piece.posicao;
+    const originPx = boardToPixel(i, j);
+    const relX = event.clientX - rect.left;
+    const relY = event.clientY - rect.top;
+    setDragState({
+      tipo: piece.tipo,
+      origem: piece.posicao,
+      x: originPx.x,
+      y: originPx.y,
+      offsetX: relX - originPx.x,
+      offsetY: relY - originPx.y,
+    });
+  }, [boardToPixel, canDragPiece, tileSize]);
+
+  useEffect(() => {
+    if (!dragState || !boardAreaRef.current) return;
+
+    const onMouseMove = (event) => {
+      const rect = boardAreaRef.current.getBoundingClientRect();
+      const relX = event.clientX - rect.left;
+      const relY = event.clientY - rect.top;
+      setDragState((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          x: relX - prev.offsetX,
+          y: relY - prev.offsetY,
+        };
+      });
+    };
+
+    const onMouseUp = (event) => {
+      if (!dragState) return;
+      const rect = boardAreaRef.current.getBoundingClientRect();
+      const relX = event.clientX - rect.left;
+      const relY = event.clientY - rect.top;
+      const destinoI = Math.floor(relY / tileSize);
+      const destinoJ = Math.floor(relX / tileSize);
+      const origem = dragState.origem;
+      const destinoValido = destinoI >= 0 && destinoI < 8 && destinoJ >= 0 && destinoJ < 8;
+      const moveuParaOutraCasa = origem[0] !== destinoI || origem[1] !== destinoJ;
+
+      if (destinoValido && moveuParaOutraCasa) {
+        const destino = [destinoI, destinoJ];
+        const destinoPx = boardToPixel(destinoI, destinoJ);
+        setDropTransition({
+          tipo: dragState.tipo,
+          origem,
+          destino,
+          x: destinoPx.x,
+          y: destinoPx.y,
+        });
+        setDragState(null);
+        moverPecaRef.current?.(origem, destino);
+        return;
+      }
+
+      setDropTransition(null);
+      setDragState(null);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [dragState, tileSize, boardToPixel]);
+
+  const esperar = useCallback((ms) => new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  }), []);
 
   const pecasBrancasNoTabuleiro = tabuleiro.flat().filter((p) => p === 1 || p === 3).length;
   const pecasPretasNoTabuleiro = tabuleiro.flat().filter((p) => p === 2 || p === 4).length;
@@ -198,44 +380,44 @@ export default function App() {
       });
   }
 
-  function moverPeca(origem, destino) {
-    fetch(`${API_URL}/mover`, {
+  async function moverPeca(origem, destino) {
+    if (interactionLocked) return;
+    const resposta = await fetch(`${API_URL}/mover`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ origem, destino, session_id: sessionId }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d.sucesso) return;
-        tocarSomMovimento();
+    });
+    const d = await resposta.json();
+    if (!d.sucesso) {
+      setDropTransition(null);
+      return;
+    }
+    tocarSomMovimento();
+    setDropTransition(null);
+    setTabuleiro(d.tabuleiro);
+    setTurno(d.turno);
+    setPecaObrigatoria(d.peca_obrigatoria);
 
-        // Sempre atualiza primeiro
-        setTabuleiro(d.tabuleiro);
-        setTurno(d.turno);
-        setPecaObrigatoria(d.peca_obrigatoria);
+    if (d.mensagem === "Continua") {
+      return;
+    }
 
-        //Captura múltipla → para aqui
-        if (d.mensagem === "Continua") {
-          return;
-        }
+    if (d.vencedor !== null) {
+      setVencedorMsg(d.mensagem_vitoria || "");
+      if (d.vencedor === 1) {
+        tocarSomVitoria();
+        spawnConfetes();
+        setTela(TELAS.VITORIA);
+      } else {
+        setTela(TELAS.DERROTA);
+      }
+      return;
+    }
 
-        // se já venceu, para aqui
-        if (d.vencedor !== null) {
-          setVencedorMsg(d.mensagem_vitoria || "");
-          if (d.vencedor === 1) {
-            tocarSomVitoria();
-            spawnConfetes();
-            setTela(TELAS.VITORIA);
-          } else {
-            setTela(TELAS.DERROTA);
-          }
-          return;
-        }
-
-        //2. IA começa a pensar
-        chamarIA(faseSelecionada);
-      });
+    chamarIA(faseSelecionada);
   }
+
+  moverPecaRef.current = moverPeca;
 
   function reiniciar() {
     fetch(`${API_URL}/resetar`, {
@@ -292,6 +474,62 @@ export default function App() {
     setDicaAtiva((v) => !v);
   }
 
+  function renderConfigPanel(onClose, closeLabel = "VOLTAR") {
+    return (
+      <div className="panel config-panel">
+        <div className="panel-title">Configurações</div>
+
+        <div className="config-list">
+          <div className="config-item">
+            <div className="config-info">
+              <div className="config-icon">🔊</div>
+              <div className="config-text">
+                <strong>Efeitos Sonoros</strong>
+                <span>Sons de movimento e vitória</span>
+              </div>
+            </div>
+            <button
+              className={`toggle-btn ${somLigado ? "on" : "off"}`}
+              onClick={() => setSomLigado(!somLigado)}
+            >
+              <div className="toggle-knob" />
+            </button>
+          </div>
+
+          <div className="config-item">
+            <div className="config-info">
+              <div className="config-icon">🖥️</div>
+              <div className="config-text">
+                <strong>Tela Cheia</strong>
+                <span>Para não clicar fora sem querer</span>
+              </div>
+            </div>
+            <button className="btn blue sm config-action" onClick={toggleFullscreen}>
+              {document.fullscreenElement ? "SAIR" : "ENTRAR"}
+            </button>
+          </div>
+
+          <div className="config-item danger-zone">
+            <div className="config-info">
+              <div className="config-icon">🗑️</div>
+              <div className="config-text">
+                <strong>Zerar Progresso</strong>
+                <span>Voltar para a Fase 1</span>
+              </div>
+            </div>
+            <button className="btn red sm config-action" onClick={resetarProgresso}>
+              APAGAR
+            </button>
+          </div>
+        </div>
+
+        <div className="btn-row" style={{ marginTop: "24px" }}>
+          <button className="btn gray" onClick={onClose}>{closeLabel}</button>
+        </div>
+      </div>
+    );
+  }
+
   function spawnConfetes() {
     const cores = ["#f0a030", "#3ac430", "#4090e0", "#e04040", "#c030c0", "#fff", "#ffee00"];
     const novos = Array.from({ length: 50 }, (_, i) => ({
@@ -305,73 +543,53 @@ export default function App() {
     setTimeout(() => setConfetes([]), 3500);
   }
 
-  function executarCaminhoIA(caminho) {
+  async function executarCaminhoIA(caminho) {
     if (!Array.isArray(caminho) || caminho.length < 2) {
       console.warn("Caminho inválido:", caminho);
       setIaPensando(false);
       return;
     }
 
-    let i = 0;
-
-    function proximo() {
-      if (i >= caminho.length - 1) {
-        setIaPensando(false);
-        return;
-      }
-
+    for (let i = 0; i < caminho.length - 1; i++) {
       const origem = caminho[i];
       const destino = caminho[i + 1];
-
-      fetch(`${API_URL}/executar`, {
+      const resposta = await fetch(`${API_URL}/executar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ origem, destino, session_id: sessionId }),
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          if (!d.sucesso) {
-            console.warn("Falha ao executar passo da IA:", origem, destino, d);
-            setIaPensando(false);
-            return;
-          }
-          tocarSomMovimento();
+      });
+      const d = await resposta.json();
 
-          setTabuleiro(d.tabuleiro);
-          setTurno(d.turno);
-          setPecaObrigatoria(d.peca_obrigatoria);
+      if (!d.sucesso) {
+        console.warn("Falha ao executar passo da IA:", origem, destino, d);
+        setIaPensando(false);
+        return;
+      }
 
-          // 🟢 SE ainda pode continuar captura
-          if (d.mensagem === "Continua") {
-            i++;
-            setTimeout(proximo, 500 + Math.random() * 500);
-            return;
-          }
+      tocarSomMovimento();
+      setTabuleiro(d.tabuleiro);
+      setTurno(d.turno);
+      setPecaObrigatoria(d.peca_obrigatoria);
 
-          // 🟢 SE terminou
-          if (d.vencedor !== null) {
-            setIaPensando(false);
-            setVencedorMsg(d.mensagem_vitoria || "");
+      if (d.vencedor !== null) {
+        setIaPensando(false);
+        setVencedorMsg(d.mensagem_vitoria || "");
 
-            if (d.vencedor === 1) {
-              tocarSomVitoria();
-              spawnConfetes();
-              setTela(TELAS.VITORIA);
-            } else {
-              setTela(TELAS.DERROTA);
-            }
-            return;
-          }
+        if (d.vencedor === 1) {
+          tocarSomVitoria();
+          spawnConfetes();
+          setTela(TELAS.VITORIA);
+        } else {
+          setTela(TELAS.DERROTA);
+        }
+        return;
+      }
 
-          // 🟢 segue fluxo normal
-          i++;
-          setTimeout(proximo, 500 + Math.random() * 500);
-        });
+      await esperar(500 + Math.random() * 500);
     }
-
-    proximo();
+    setIaPensando(false);
   }
 
   return (
@@ -523,57 +741,7 @@ export default function App() {
       {/* ── CONFIGURAÇÕES ── */}
       {tela === TELAS.CONFIG && (
         <div className="screen">
-          <div className="panel config-panel">
-            <div className="panel-title">Configurações</div>
-
-            <div className="config-list">
-              <div className="config-item">
-                <div className="config-info">
-                  <div className="config-icon">🔊</div>
-                  <div className="config-text">
-                    <strong>Efeitos Sonoros</strong>
-                    <span>Sons de movimento e vitória</span>
-                  </div>
-                </div>
-                <button
-                  className={`toggle-btn ${somLigado ? "on" : "off"}`}
-                  onClick={() => setSomLigado(!somLigado)}
-                >
-                  <div className="toggle-knob" />
-                </button>
-              </div>
-
-              <div className="config-item">
-                <div className="config-info">
-                  <div className="config-icon">🖥️</div>
-                  <div className="config-text">
-                    <strong>Tela Cheia</strong>
-                    <span>Para não clicar fora sem querer</span>
-                  </div>
-                </div>
-                <button className="btn blue sm config-action" onClick={toggleFullscreen}>
-                  {document.fullscreenElement ? "SAIR" : "ENTRAR"}
-                </button>
-              </div>
-
-              <div className="config-item danger-zone">
-                <div className="config-info">
-                  <div className="config-icon">🗑️</div>
-                  <div className="config-text">
-                    <strong>Zerar Progresso</strong>
-                    <span>Voltar para a Fase 1</span>
-                  </div>
-                </div>
-                <button className="btn red sm config-action" onClick={resetarProgresso}>
-                  APAGAR
-                </button>
-              </div>
-            </div>
-
-            <div className="btn-row" style={{ marginTop: "24px" }}>
-              <button className="btn gray" onClick={() => setTela(TELAS.HOME)}>VOLTAR</button>
-            </div>
-          </div>
+          {renderConfigPanel(() => setTela(TELAS.HOME), "VOLTAR")}
         </div>
       )}
 
@@ -585,6 +753,20 @@ export default function App() {
       {/* ── TELA DE JOGO ── */}
       {tela === TELAS.JOGO && (
         <div className="screen game-screen">
+          <button
+            className="settings-fab"
+            aria-label="Abrir configurações"
+            onClick={() => setConfigJogoAberta((v) => !v)}
+          >
+            ⚙
+          </button>
+          {configJogoAberta && (
+            <div className="in-game-config-overlay" onClick={() => setConfigJogoAberta(false)}>
+              <div onClick={(e) => e.stopPropagation()}>
+                {renderConfigPanel(() => setConfigJogoAberta(false), "FECHAR")}
+              </div>
+            </div>
+          )}
           <div className="game-layout">
             <div className="game-board-cluster">
               <div className="board-wrap">
@@ -603,46 +785,99 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="board">
-                  {tabuleiro.map((linha, i) =>
-                    linha.map((casa, j) => {
-                      const isOrigemDica = dicaAtiva && jogadasPossiveis.some(move => move[0][0] === i && move[0][1] === j);
-                      const isDestinoDica = dicaAtiva && jogadasPossiveis.some(move => move[1][0] === i && move[1][1] === j);
+                <div className="board-area" ref={boardAreaRef}>
 
+                  <div className="board-coords board-coords--x">
+                    {X_COORDS.map((coord) => (
+                      <span key={coord}>{coord}</span>
+                    ))}
+                  </div>
+                  <div className="board-coords board-coords--y">
+                    {Y_COORDS.map((coord) => (
+                      <span key={coord}>{coord}</span>
+                    ))}
+                  </div>
+                  <div className="board">
+                    {tabuleiro.map((linha, i) =>
+                      linha.map((_, j) => {
+                        const isOrigemDica = dicaAtiva && jogadasPossiveis.some((move) => move[0][0] === i && move[0][1] === j);
+                        const isDestinoDica = dicaAtiva && jogadasPossiveis.some((move) => move[1][0] === i && move[1][1] === j);
+                        const isObrigatoria = !!pecaObrigatoria && pecaObrigatoria[0] === i && pecaObrigatoria[1] === j;
+                        return (
+                          <Casa
+                            key={`${i}-${j}`}
+                            i={i}
+                            j={j}
+                            isOrigemDica={isOrigemDica}
+                            isDestinoDica={isDestinoDica}
+                            isObrigatoria={isObrigatoria}
+                          />
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="pieces-layer">
+                    {pieces.map((piece) => {
+                      const [i, j] = piece.posicao;
+                      const pos = boardToPixel(i, j);
+                      const canDrag = canDragPiece(piece.tipo, piece.posicao);
+                      const isForcedChainPiece =
+                        !!pecaObrigatoria &&
+                        pecaObrigatoria[0] === i &&
+                        pecaObrigatoria[1] === j;
+                      const isCaptureCandidate =
+                        turno === 1 &&
+                        !iaPensando &&
+                        captureOrigins.has(`${i}-${j}`);
+                      const shouldAnimateMandatory =
+                        turno === 1 &&
+                        !iaPensando &&
+                        (pecaObrigatoria ? isForcedChainPiece : isCaptureCandidate);
                       return (
-                        <Casa
-                          key={`${i}-${j}`}
-                          i={i}
-                          j={j}
-                          moverPeca={
-                            !iaPensando && turno === 1
-                              ? moverPeca
-                              : () => { } // função vazia
-                          }
-                          dicaAtiva={dicaAtiva}
-                          isOrigemDica={isOrigemDica}
-                          isDestinoDica={isDestinoDica}
-                        >
-                          {casa !== 0 && (<Peca
-                            tipo={casa}
-                            posicao={[i, j]}
-                            corPeca={corPeca}
-                            turno={turno}
-                            iaPensando={iaPensando}
-                            pecaObrigatoria={pecaObrigatoria}
-                          />)}
-                        </Casa>
+                        <Peca
+                          key={piece.id}
+                          tipo={piece.tipo}
+                          corPeca={corPeca}
+                          x={pos.x}
+                          y={pos.y}
+                          size={tileSize}
+                          animate={false}
+                          canDrag={canDrag}
+                          showMandatoryIdle={shouldAnimateMandatory}
+                          onMouseDown={(event) => iniciarDrag(event, piece)}
+                        />
                       );
-                    })
-                  )}
-                </div>
+                    })}
 
-                <div className="board-btns">
-                  <button className="btn sm" onClick={mostrarDica}>
-                    {dicaAtiva ? "OCULTAR" : "DICA"}
-                  </button>
-                  <button className="btn red sm" onClick={desistir}>DESISTIR</button>
-                  <button className="btn gray sm" onClick={reiniciar}>REINICIAR</button>
+                    {dragState && (
+                      <Peca
+                        key={`drag-${dragState.origem.join("-")}`}
+                        tipo={dragState.tipo}
+                        corPeca={corPeca}
+                        x={dragState.x}
+                        y={dragState.y}
+                        size={tileSize}
+                        isDragging
+                        canDrag
+                        animate={false}
+                        zIndex={6}
+                      />
+                    )}
+
+                    {dropTransition && (
+                      <Peca
+                        key={`drop-${dropTransition.origem.join("-")}-${dropTransition.destino.join("-")}`}
+                        tipo={dropTransition.tipo}
+                        corPeca={corPeca}
+                        x={dropTransition.x}
+                        y={dropTransition.y}
+                        size={tileSize}
+                        animate={false}
+                        zIndex={5}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="capture-float capture-float--ia">
@@ -654,16 +889,23 @@ export default function App() {
                   <PilhaCapturas count={capturadasPeloJogador} variant="jogador" corPeca={corPeca} />
                 </div>
 
-                <div className="adversary-float">
-                  <div className="adversary-float-title">Adversário da fase</div>
-                  <img
-                    className="adversario-img"
-                    src={adversarioImgErro ? "/adversarios/placeholder.svg" : caminhoImagemAdversario}
-                    alt={`Adversário da ${nomeFase}`}
-                    onError={() => setAdversarioImgErro(true)}
-                  />
-                  <div className="adversary-phase-name">{nomeFase}</div>
-                  <div className="adversary-progress">Progresso: Fase {faseAtual}</div>
+              </div>
+              <div className="adversary-float">
+                <div className="adversary-float-title">Adversário da fase</div>
+                <img
+                  className="adversario-img"
+                  src={adversarioImgErro ? "/adversarios/placeholder.svg" : caminhoImagemAdversario}
+                  alt={`Adversário da ${nomeFase}`}
+                  onError={() => setAdversarioImgErro(true)}
+                />
+                <div className="adversary-phase-name">{nomeFase}</div>
+                <div className="adversary-progress">Progresso: Fase {faseAtual}</div>
+                <div className="adversary-actions">
+                  <button className="btn sm" onClick={mostrarDica}>
+                    {dicaAtiva ? "OCULTAR" : "DICA"}
+                  </button>
+                  <button className="btn blue sm" onClick={reiniciar}>REINICIAR</button>
+                  <button className="btn red sm" onClick={desistir}>DESISTIR</button>
                 </div>
               </div>
             </div>

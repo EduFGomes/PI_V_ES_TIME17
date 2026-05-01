@@ -38,7 +38,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(10, 20, 32, 0.35), rgba(8, 12, 18, 0.55));
+  background: linear-gradient(180deg, rgba(10, 20, 32, 0.35), rgba(8, 12, 18, 0.40));
 }
 
 .cloud {
@@ -87,6 +87,47 @@
   justify-content: center;
   padding: 20px;
   overflow: visible;
+}
+
+.settings-fab {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #c6c6c6, #9a9a9a);
+  box-shadow: 0 4px 0 #424242, 0 6px 14px rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  font-family: var(--label-font);
+  cursor: pointer;
+  z-index: 40;
+  text-shadow: 0 1px 2px #0006;
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
+}
+
+.settings-fab:hover {
+  filter: brightness(1.08);
+}
+
+.settings-fab:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #7a3d10, 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+.in-game-config-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
 
 .game-screen .game-layout {
@@ -291,11 +332,15 @@
 
 /* ── TABULEIRO ── */
 .game-board-cluster {
-  --board-w: min(78vh, 78vw, 660px);
+  --board-w: min(74vh, 74vw, 620px);
   position: relative;
   width: 100%;
-  max-width: 700px;
+  max-width: 1100px;
   margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
   overflow: visible;
 }
 
@@ -306,8 +351,8 @@
   border-radius: 14px;
   padding: 16px;
   box-shadow: 0 6px 24px #0005;
-  width: 100%;
-  max-width: 700px;
+  width: calc(var(--board-w) + 32px);
+  max-width: none;
   overflow: visible;
 }
 
@@ -357,17 +402,17 @@
 }
 
 .adversary-float {
-  position: absolute;
-  top: 6px;
-  right: -10px;
-  transform: translateX(100%);
+  position: relative;
+  top: 0;
+  right: 0;
+  transform: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 10px;
   flex-shrink: 0;
-  max-width: 220px;
+  max-width: 240px;
   padding: 8px 4px;
 }
 
@@ -399,22 +444,25 @@
 }
 
 .turn-badge-wrap {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translate(-50%, -100%);
+  z-index: 5;
 }
 
 .turn-badge {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: #fff9;
+  background: #fff;
   border: 2px solid var(--panel-border);
   border-radius: 20px;
   padding: 4px 14px;
   font-family: var(--label-font);
   font-size: 14px;
   color: #5a3010;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
 }
 
 .turn-dot {
@@ -429,8 +477,100 @@
   border: 2px solid #8a5020;
   border-radius: 4px;
   overflow: hidden;
-  width: var(--board-w);
+  width: 100%;
   margin: 0 auto;
+}
+
+.board-area {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pieces-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.board-coords {
+  position: absolute;
+  display: grid;
+  font-family: var(--label-font);
+  font-size: 13px;
+  color: #6f3f1c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.board-coords--x {
+  left: 0;
+  right: 0;
+  bottom: -18px;
+  height: 22px;
+  grid-template-columns: repeat(8, 1fr);
+  align-items: center;
+  justify-items: center;
+}
+
+.board-coords--y {
+  left: -18px;
+  top: 0;
+  bottom: 0;
+  width: 22px;
+  grid-template-rows: repeat(8, 1fr);
+  align-items: center;
+  justify-items: center;
+}
+
+.piece-absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.piece-disc:hover {
+  transform: scale(1.05);
+}
+
+.piece-disc:active {
+  transform: scale(0.95);
+}
+
+@keyframes mandatoryPieceIdle {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.board-cell {
+  position: relative;
+}
+
+.board-cell--mandatory .mandatory-overlay {
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 3px rgba(255, 110, 0, 0.4), inset 0 0 10px rgba(255, 170, 0, 0.5);
+  pointer-events: none;
 }
 
 .board-btns {
@@ -439,6 +579,18 @@
   justify-content: center;
   margin-top: 10px;
   flex-wrap: wrap;
+}
+
+.adversary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.adversary-actions .btn {
+  width: 100%;
 }
 
 .game-layout {
@@ -821,7 +973,9 @@
   .game-board-cluster {
     width: 100%;
     max-width: 700px;
-    --board-w: min(82vw, 620px);
+    --board-w: min(84vw, 600px);
+    flex-direction: column;
+    align-items: center;
   }
 
   .board {
