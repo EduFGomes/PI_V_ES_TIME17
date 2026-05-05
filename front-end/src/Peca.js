@@ -1,4 +1,4 @@
-import { useDrag } from "react-dnd";
+import { memo } from "react";
 
 export const GRADIENTES = {
   red:   "radial-gradient(circle at 35% 30%, #ff8080, #cc2020 60%, #800000)",
@@ -13,31 +13,21 @@ export function gradientePecaAdversario(corPeca) {
     : "radial-gradient(circle at 35% 30%, #555, #1a1a1a 60%, #000)";
 }
 
-export default function Peca({ tipo, posicao, corPeca = "white", turno, iaPensando, pecaObrigatoria }) {
+function Peca({
+  tipo,
+  corPeca = "white",
+  x,
+  y,
+  size,
+  isDragging = false,
+  canDrag = false,
+  showMandatoryIdle = false,
+  animate = true,
+  zIndex = 2,
+  onMouseDown,
+}) {
   const isJogador1 = tipo === 1 || tipo === 3;
   const isDama = tipo === 3 || tipo === 4;
-
-  // turno 1 = brancas jogam, turno 2 = pretas jogam
-  const ehBranca = tipo === 1 || tipo === 3;
-
-  const podeMover =
-    !iaPensando &&
-    turno === 1 &&
-    ehBranca &&
-    (
-      !pecaObrigatoria ||
-      (posicao[0] === pecaObrigatoria[0] &&
-      posicao[1] === pecaObrigatoria[1])
-    );
-
-    const [{ isDragging }, drag] = useDrag(() => ({
-    type: "PECA",
-    item: { posicao }, // Não precisa do ternário aqui se o canDrag já filtra
-    canDrag: () => podeMover,
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }), [podeMover, posicao]); // <-- ADICIONE ESSAS DEPENDÊNCIAS AQUI!
 
   const corAdversario = gradientePecaAdversario(corPeca);
 
@@ -47,36 +37,67 @@ export default function Peca({ tipo, posicao, corPeca = "white", turno, iaPensan
 
   return (
     <div
-      ref={drag}
+      className="piece-absolute"
+      onMouseDown={onMouseDown}
       style={{
-        width: "80%",
-        height: "80%",
-        borderRadius: "50%",
-        background: bg,
-        border: "2px solid rgba(0,0,0,0.25)",
-        boxShadow: isDragging
-          ? "0 8px 20px #0009"
-          : "0 2px 6px #0006, inset 0 1px 3px rgba(255,255,255,0.35)",
-        opacity: isDragging ? 0.55 : podeMover ? 1 : 0.65,
-        cursor: podeMover ? "grab" : "not-allowed",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        transition: "box-shadow 0.15s, opacity 0.15s",
+        width: `${size}px`,
+        height: `${size}px`,
+        transform: `translate3d(${x}px, ${y}px, 0)`,
+        transition: animate ? "transform 0.25s ease" : "none",
+        zIndex,
+        cursor: canDrag ? (isDragging ? "grabbing" : "grab") : "not-allowed",
       }}
     >
-      {isDama && (
-        <span style={{
-          position: "absolute",
-          fontSize: 15,
-          color: "gold",
-          textShadow: "0 1px 3px #0008",
-          userSelect: "none",
-        }}>
-          ♛
-        </span>
-      )}
+      <div
+        style={{
+          width: "80%",
+          height: "80%",
+          borderRadius: "50%",
+          background: bg,
+          border: "2px solid rgba(0,0,0,0.25)",
+          boxShadow: isDragging
+            ? "0 8px 20px #0009"
+            : "0 2px 6px #0006, inset 0 1px 3px rgba(255,255,255,0.35)",
+          opacity: isDragging ? 0.75 : canDrag ? 1 : 0.65,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+          transition: "transform 0.12s ease, box-shadow 0.15s, opacity 0.15s",
+          animation: showMandatoryIdle && !isDragging ? "mandatoryPieceIdle 1.05s ease-in-out infinite" : "none",
+        }}
+        className="piece-disc"
+      >
+        {isDama && (
+          <span style={{
+            position: "absolute",
+            fontSize: 15,
+            color: "gold",
+            textShadow: "0 1px 3px #0008",
+            userSelect: "none",
+          }}>
+            ♛
+          </span>
+        )}
+      </div>
     </div>
   );
 }
+
+function areEqual(prev, next) {
+  return (
+    prev.tipo === next.tipo &&
+    prev.corPeca === next.corPeca &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.size === next.size &&
+    prev.isDragging === next.isDragging &&
+    prev.canDrag === next.canDrag &&
+    prev.showMandatoryIdle === next.showMandatoryIdle &&
+    prev.animate === next.animate &&
+    prev.zIndex === next.zIndex &&
+    prev.onMouseDown === next.onMouseDown
+  );
+}
+
+export default memo(Peca, areEqual);

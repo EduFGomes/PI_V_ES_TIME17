@@ -81,3 +81,16 @@
 {"sessionId":"684460","timestamp":1777503926742,"runId":"run-1","hypothesisId":"H1","location":"TutorialModal.js:220","message":"TutorialModal rendered","data":{"passoAtual":3,"totalSlides":4}}
 {"sessionId":"684460","timestamp":1777503926995,"runId":"run-1","hypothesisId":"H3","location":"TutorialModal.js:119","message":"InteractiveBoard reset state from slide config","data":{"slideId":"poder","start":[3,0],"target":[0,3]}}
 {"sessionId":"684460","timestamp":1777503928323,"runId":"run-1","hypothesisId":"H4","location":"TutorialModal.js:127","message":"Valid tutorial move completed","data":{"slideId":"poder","drop":[0,3],"target":[0,3]}}
+{"sessionId":"684460","timestamp":1777652072284,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777652072962,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777652730309,"runId":"run-1","hypothesisId":"H3","location":"TutorialModal.js:119","message":"InteractiveBoard reset state from slide config","data":{"slideId":"movimento","start":[2,1],"target":[1,2]}}
+{"sessionId":"684460","timestamp":1777652730312,"runId":"run-1","hypothesisId":"H1","location":"TutorialModal.js:220","message":"TutorialModal rendered","data":{"passoAtual":0,"totalSlides":4}}
+{"sessionId":"684460","timestamp":1777652731470,"runId":"run-1","hypothesisId":"H4","location":"TutorialModal.js:127","message":"Valid tutorial move completed","data":{"slideId":"movimento","drop":[1,2],"target":[1,2]}}
+{"sessionId":"684460","timestamp":1777652887567,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777653102688,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777653568782,"runId":"run-1","hypothesisId":"H3","location":"TutorialModal.js:119","message":"InteractiveBoard reset state from slide config","data":{"slideId":"movimento","start":[2,1],"target":[1,2]}}
+{"sessionId":"684460","timestamp":1777653568786,"runId":"run-1","hypothesisId":"H1","location":"TutorialModal.js:220","message":"TutorialModal rendered","data":{"passoAtual":0,"totalSlides":4}}
+{"sessionId":"684460","timestamp":1777653582187,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777653701924,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777654941627,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
+{"sessionId":"684460","timestamp":1777655143976,"runId":"run-1","hypothesisId":"H2","location":"TutorialModal.js:7","message":"TutorialModal module loaded","data":{"importsResolved":true}}
