@@ -36,6 +36,20 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const X_COORDS = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const Y_COORDS = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
+function formatarMensagemVitoria(msgOriginal, corPeca) {
+  if (!msgOriginal) return "";
+  let nomeUser = (NOMES_CORES_PT[corPeca] || "BRANCAS").toLowerCase();
+  let nomeOponente = corPeca === "black" ? "brancas" : "pretas";
+  
+  let msg = msgOriginal
+    .replace(/brancas/ig, "__USER__")
+    .replace(/pretas/ig, "__OPONENTE__")
+    .replace(/__USER__/g, nomeUser)
+    .replace(/__OPONENTE__/g, nomeOponente);
+    
+  return msg.charAt(0).toUpperCase() + msg.slice(1);
+}
+
 export default function App() {
   const [tela, setTela] = useState(TELAS.HOME);
   const [tabuleiro, setTabuleiro] = useState([]);
@@ -332,7 +346,7 @@ export default function App() {
         .then((ia) => {
           if (ia?.vencedor !== undefined && ia?.vencedor !== null) {
             setIaPensando(false);
-            setVencedorMsg(ia.mensagem_vitoria || "");
+            setVencedorMsg(formatarMensagemVitoria(ia.mensagem_vitoria, corPeca));
             if (ia.vencedor === 1) {
               tocarSomVitoria();
               spawnConfetes();
@@ -403,7 +417,7 @@ export default function App() {
     }
 
     if (d.vencedor !== null) {
-      setVencedorMsg(d.mensagem_vitoria || "");
+      setVencedorMsg(formatarMensagemVitoria(d.mensagem_vitoria, corPeca));
       if (d.vencedor === 1) {
         tocarSomVitoria();
         spawnConfetes();
@@ -443,7 +457,7 @@ export default function App() {
 
   function desistir() {
     if (window.confirm("Deseja desistir da partida?")) {
-      setVencedorMsg("O adversário venceu desta vez.");
+      setVencedorMsg("Você desistiu da partida.");
       setFaseAtual(1);
       setTela(TELAS.DERROTA);
     }
@@ -575,7 +589,7 @@ export default function App() {
 
       if (d.vencedor !== null) {
         setIaPensando(false);
-        setVencedorMsg(d.mensagem_vitoria || "");
+        setVencedorMsg(formatarMensagemVitoria(d.mensagem_vitoria, corPeca));
 
         if (d.vencedor === 1) {
           tocarSomVitoria();
@@ -950,7 +964,6 @@ export default function App() {
             <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>FIM DE JOGO</div>
             <div className="hearts">
             </div>
-            <div className="lose-sub">O ADVERSÁRIO VENCEU DESTA VEZ</div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
             <div className="btn-row">
               <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
