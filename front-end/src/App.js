@@ -73,6 +73,9 @@ export default function App() {
   const [adversarioImgErro, setAdversarioImgErro] = useState(false);
   const [configJogoAberta, setConfigJogoAberta] = useState(false);
   const [mostrarTabuleiroFinal, setMostrarTabuleiroFinal] = useState(false);
+  const [mostrarConfirmacaoDesistir, setMostrarConfirmacaoDesistir] = useState(false);
+  const [mostrarConfirmacaoZerar, setMostrarConfirmacaoZerar] = useState(false);
+  const [mensagemAlerta, setMensagemAlerta] = useState("");
   const [boardSize, setBoardSize] = useState(0);
   const [dragState, setDragState] = useState(null);
   const [dropTransition, setDropTransition] = useState(null);
@@ -469,26 +472,32 @@ export default function App() {
   }
 
   function desistir() {
-    if (window.confirm("Deseja desistir da partida?")) {
-      setVencedorMsg("Você desistiu da partida.");
-      setFaseAtual(1);
-      setTela(TELAS.DERROTA);
-    }
+    setMostrarConfirmacaoDesistir(true);
+  }
+
+  function confirmarDesistencia() {
+    setMostrarConfirmacaoDesistir(false);
+    setVencedorMsg("Você desistiu da partida.");
+    setFaseAtual(1);
+    setTela(TELAS.DERROTA);
   }
 
   function resetarProgresso() {
-    if (window.confirm("Tem certeza que deseja apagar todo o seu progresso e voltar para a Fase 1?")) {
-      setFaseAtual(1);
-      setFaseSelecionada(1);
-      localStorage.removeItem("faseAtual");
-      alert("Progresso apagado com sucesso!");
-    }
+    setMostrarConfirmacaoZerar(true);
+  }
+
+  function confirmarZerarProgresso() {
+    setMostrarConfirmacaoZerar(false);
+    setFaseAtual(1);
+    setFaseSelecionada(1);
+    localStorage.removeItem("faseAtual");
+    setMensagemAlerta("Progresso apagado com sucesso!");
   }
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {
-        alert("Não foi possível entrar em modo tela cheia.");
+        setMensagemAlerta("Não foi possível entrar em modo tela cheia.");
       });
     } else {
       if (document.exitFullscreen) {
@@ -930,11 +939,13 @@ export default function App() {
                 <div className="adversary-phase-name">{nomeFase}</div>
                 <div className="adversary-progress">Progresso: Fase {faseAtual}</div>
                 <div className="adversary-actions">
-                  <button className="btn sm" onClick={mostrarDica}>
+                  <button className="btn sm" onClick={mostrarDica} disabled={tela !== TELAS.JOGO}>
                     {dicaAtiva ? "OCULTAR" : "DICA"}
                   </button>
                   <button className="btn blue sm" onClick={reiniciar}>REINICIAR</button>
-                  <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                  {tela === TELAS.JOGO && (
+                    <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                  )}
                   {mostrarTabuleiroFinal && (
                     <button className="btn dark-green sm" style={{ animation: "fadeIn 0.3s" }} onClick={() => setMostrarTabuleiroFinal(false)}>
                       RESULTADO
@@ -942,6 +953,47 @@ export default function App() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRMAR DESISTÊNCIA ── */}
+      {mostrarConfirmacaoDesistir && (
+        <div className="game-over-overlay" style={{ zIndex: 9999 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>DESISTIR</div>
+            <div className="panel-sub">Deseja mesmo desistir da partida?</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn red sm" onClick={confirmarDesistencia}>SIM, DESISTIR</button>
+              <button className="btn blue sm" onClick={() => setMostrarConfirmacaoDesistir(false)}>CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRMAR ZERAR PROGRESSO ── */}
+      {mostrarConfirmacaoZerar && (
+        <div className="game-over-overlay" style={{ zIndex: 10000 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>ZERAR PROGRESSO</div>
+            <div className="panel-sub">Tem certeza que deseja apagar todo o seu progresso e voltar para a Fase 1?</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn red sm" onClick={confirmarZerarProgresso}>SIM, APAGAR</button>
+              <button className="btn blue sm" onClick={() => setMostrarConfirmacaoZerar(false)}>CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ALERTA GENÉRICO ── */}
+      {mensagemAlerta && (
+        <div className="game-over-overlay" style={{ zIndex: 10001 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#333" }}>AVISO</div>
+            <div className="panel-sub">{mensagemAlerta}</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn blue sm" onClick={() => setMensagemAlerta("")}>OK</button>
             </div>
           </div>
         </div>
