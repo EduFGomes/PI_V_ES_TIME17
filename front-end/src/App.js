@@ -21,6 +21,7 @@ const TELAS = {
   JOGO: "jogo",
   VITORIA: "vitoria",
   DERROTA: "derrota",
+  EMPATE: "empate",
 };
 
 const CORES_PECA = ["red", "black", "gold", "white"];
@@ -351,6 +352,8 @@ export default function App() {
               tocarSomVitoria();
               spawnConfetes();
               setTela(TELAS.VITORIA);
+            } else if (ia.vencedor === 0) {
+              setTela(TELAS.EMPATE);
             } else {
               setTela(TELAS.DERROTA);
             }
@@ -422,6 +425,8 @@ export default function App() {
         tocarSomVitoria();
         spawnConfetes();
         setTela(TELAS.VITORIA);
+      } else if (d.vencedor === 0) {
+        setTela(TELAS.EMPATE);
       } else {
         setTela(TELAS.DERROTA);
       }
@@ -595,6 +600,8 @@ export default function App() {
           tocarSomVitoria();
           spawnConfetes();
           setTela(TELAS.VITORIA);
+        } else if (d.vencedor === 0) {
+          setTela(TELAS.EMPATE);
         } else {
           setTela(TELAS.DERROTA);
         }
@@ -971,6 +978,28 @@ export default function App() {
                 className="btn sm"
                 onClick={() => {
                   setFaseAtual(1);
+                  setTela(TELAS.HOME);
+                }}
+              >
+                MENU
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EMPATE ── */}
+      {tela === TELAS.EMPATE && (
+        <div className="screen">
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#555" }}>EMPATE</div>
+            <div className="trophy">🤝</div>
+            {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
+              <button
+                className="btn sm"
+                onClick={() => {
                   setTela(TELAS.HOME);
                 }}
               >
