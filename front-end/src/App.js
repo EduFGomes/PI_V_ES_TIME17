@@ -75,6 +75,7 @@ export default function App() {
   const [mostrarTabuleiroFinal, setMostrarTabuleiroFinal] = useState(false);
   const [mostrarConfirmacaoDesistir, setMostrarConfirmacaoDesistir] = useState(false);
   const [mostrarConfirmacaoZerar, setMostrarConfirmacaoZerar] = useState(false);
+  const [mostrarConfirmacaoVoltarMapa, setMostrarConfirmacaoVoltarMapa] = useState(false);
   const [mensagemAlerta, setMensagemAlerta] = useState("");
   const [boardSize, setBoardSize] = useState(0);
   const [dragState, setDragState] = useState(null);
@@ -480,6 +481,15 @@ export default function App() {
     setVencedorMsg("Você desistiu da partida.");
     setFaseAtual(1);
     setTela(TELAS.DERROTA);
+  }
+
+  function voltarMapa() {
+    setMostrarConfirmacaoVoltarMapa(true);
+  }
+
+  function confirmarVoltarMapa() {
+    setMostrarConfirmacaoVoltarMapa(false);
+    setTela(TELAS.MAPA);
   }
 
   function resetarProgresso() {
@@ -944,7 +954,10 @@ export default function App() {
                   </button>
                   <button className="btn blue sm" onClick={reiniciar}>REINICIAR</button>
                   {tela === TELAS.JOGO && (
-                    <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                    <>
+                      <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                      <button className="btn gray sm" onClick={voltarMapa}>VOLTAR</button>
+                    </>
                   )}
                   {mostrarTabuleiroFinal && (
                     <button className="btn dark-green sm" style={{ animation: "fadeIn 0.3s" }} onClick={() => setMostrarTabuleiroFinal(false)}>
@@ -967,6 +980,20 @@ export default function App() {
             <div className="btn-row" style={{ marginTop: "24px" }}>
               <button className="btn red sm" onClick={confirmarDesistencia}>SIM, DESISTIR</button>
               <button className="btn blue sm" onClick={() => setMostrarConfirmacaoDesistir(false)}>CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRMAR VOLTAR MAPA ── */}
+      {mostrarConfirmacaoVoltarMapa && (
+        <div className="game-over-overlay" style={{ zIndex: 9999 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#333" }}>VOLTAR PARA FASES</div>
+            <div className="panel-sub">Deseja voltar para o mapa de fases?</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn blue sm" onClick={confirmarVoltarMapa}>SIM, VOLTAR</button>
+              <button className="btn red sm" onClick={() => setMostrarConfirmacaoVoltarMapa(false)}>CANCELAR</button>
             </div>
           </div>
         </div>
