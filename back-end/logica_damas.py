@@ -256,9 +256,6 @@ class JogoDamas:
         if sucesso and msg != "Continua":
             vencedor, mensagem_vitoria = self.verificar_vencedor()
 
-            if vencedor:
-                self.resetar_jogo()
-
         return {
             "sucesso": sucesso,
             "mensagem": msg,

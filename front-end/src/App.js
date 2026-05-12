@@ -41,13 +41,13 @@ function formatarMensagemVitoria(msgOriginal, corPeca) {
   if (!msgOriginal) return "";
   let nomeUser = (NOMES_CORES_PT[corPeca] || "BRANCAS").toLowerCase();
   let nomeOponente = corPeca === "black" ? "brancas" : "pretas";
-  
+
   let msg = msgOriginal
     .replace(/brancas/ig, "__USER__")
     .replace(/pretas/ig, "__OPONENTE__")
     .replace(/__USER__/g, nomeUser)
     .replace(/__OPONENTE__/g, nomeOponente);
-    
+
   return msg.charAt(0).toUpperCase() + msg.slice(1);
 }
 
@@ -72,6 +72,7 @@ export default function App() {
   const [pecaObrigatoria, setPecaObrigatoria] = useState(null);
   const [adversarioImgErro, setAdversarioImgErro] = useState(false);
   const [configJogoAberta, setConfigJogoAberta] = useState(false);
+  const [mostrarTabuleiroFinal, setMostrarTabuleiroFinal] = useState(false);
   const [boardSize, setBoardSize] = useState(0);
   const [dragState, setDragState] = useState(null);
   const [dropTransition, setDropTransition] = useState(null);
@@ -108,6 +109,12 @@ export default function App() {
   useEffect(() => {
     if (tela === TELAS.JOGO) carregarTabuleiro();
   }, [tela, carregarTabuleiro]);
+
+  useEffect(() => {
+    if (tela === TELAS.JOGO || tela === TELAS.HOME) {
+      setMostrarTabuleiroFinal(false);
+    }
+  }, [tela]);
 
   useEffect(() => {
     if (tela !== TELAS.JOGO) {
@@ -171,6 +178,7 @@ export default function App() {
   const canDragPiece = useCallback((tipo, posicao) => {
     const ehBranca = tipo === 1 || tipo === 3;
     return (
+      tela === TELAS.JOGO &&
       !interactionLocked &&
       turno === 1 &&
       ehBranca &&
@@ -179,7 +187,7 @@ export default function App() {
         (posicao[0] === pecaObrigatoria[0] && posicao[1] === pecaObrigatoria[1])
       )
     );
-  }, [interactionLocked, turno, pecaObrigatoria]);
+  }, [tela, interactionLocked, turno, pecaObrigatoria]);
 
   const isCaptureMove = useCallback((origem, destino) => {
     if (!Array.isArray(origem) || !Array.isArray(destino)) return false;
@@ -772,7 +780,7 @@ export default function App() {
       )}
 
       {/* ── TELA DE JOGO ── */}
-      {tela === TELAS.JOGO && (
+      {(tela === TELAS.JOGO || tela === TELAS.VITORIA || tela === TELAS.DERROTA || tela === TELAS.EMPATE) && (
         <div className="screen game-screen">
           <button
             className="settings-fab"
@@ -927,6 +935,11 @@ export default function App() {
                   </button>
                   <button className="btn blue sm" onClick={reiniciar}>REINICIAR</button>
                   <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                  {mostrarTabuleiroFinal && (
+                    <button className="btn dark-green sm" style={{ animation: "fadeIn 0.3s" }} onClick={() => setMostrarTabuleiroFinal(false)}>
+                      RESULTADO
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -935,13 +948,16 @@ export default function App() {
       )}
 
       {/* ── VITÓRIA ── */}
-      {tela === TELAS.VITORIA && (
-        <div className="screen">
+      {tela === TELAS.VITORIA && !mostrarTabuleiroFinal && (
+        <div className="game-over-overlay">
           <div className="panel win-panel">
             <div className="panel-title" style={{ fontSize: 32, color: "#c07800" }}>VITÓRIA</div>
             <div className="trophy">🏆</div>
             <div className="win-sub">VOCÊ VENCEU!</div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
+            </div>
             <div className="btn-row">
               <button
                 className="btn green sm"
@@ -965,13 +981,16 @@ export default function App() {
       )}
 
       {/* ── DERROTA ── */}
-      {tela === TELAS.DERROTA && (
-        <div className="screen">
+      {tela === TELAS.DERROTA && !mostrarTabuleiroFinal && (
+        <div className="game-over-overlay">
           <div className="panel lose-panel">
             <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>FIM DE JOGO</div>
             <div className="hearts">
             </div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
+            </div>
             <div className="btn-row">
               <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
               <button
@@ -989,12 +1008,15 @@ export default function App() {
       )}
 
       {/* ── EMPATE ── */}
-      {tela === TELAS.EMPATE && (
-        <div className="screen">
+      {tela === TELAS.EMPATE && !mostrarTabuleiroFinal && (
+        <div className="game-over-overlay">
           <div className="panel">
             <div className="panel-title" style={{ fontSize: 26, color: "#555" }}>EMPATE</div>
             <div className="trophy">🤝</div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
+            </div>
             <div className="btn-row">
               <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
               <button
@@ -1009,6 +1031,7 @@ export default function App() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -130,6 +130,24 @@
   padding: 16px;
 }
 
+.game-over-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 45; /* Acima do botão de engrenagem, abaixo dos confetes */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .game-screen .game-layout {
   padding-left: clamp(8px, 3vw, 80px);
   padding-right: clamp(8px, 3vw, 80px);
@@ -205,6 +223,9 @@
 
 .btn.green  { background: linear-gradient(180deg,#6cd44a,#3a9420); box-shadow: 0 4px 0 #1e5810; }
 .btn.green:active { box-shadow: 0 1px 0 #1e5810; }
+
+.btn.dark-green { background: linear-gradient(180deg,#4a9d30,#226114); box-shadow: 0 4px 0 #11310a; }
+.btn.dark-green:active { box-shadow: 0 1px 0 #11310a; }
 
 .btn.red    { background: linear-gradient(180deg,#e85a5a,#b02020); box-shadow: 0 4px 0 #6a0f0f; }
 .btn.red:active { box-shadow: 0 1px 0 #6a0f0f; }
