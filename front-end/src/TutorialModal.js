@@ -15,7 +15,7 @@ function sendDebugLog(payload) {
       timestamp: Date.now(),
       ...payload,
     }),
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 // #region agent log
@@ -32,7 +32,7 @@ const SLIDES = [
   {
     id: "movimento",
     titulo: "1. Movimento",
-    texto: "Arraste a peça branca para o círculo verde.",
+    texto: "Arraste ou clique na peça branca e depois no alvo.",
     start: [2, 1],
     target: [1, 2],
     enemy: null,
@@ -40,7 +40,7 @@ const SLIDES = [
   {
     id: "captura",
     titulo: "2. Captura",
-    texto: "Pule a peça preta arrastando para o alvo!",
+    texto: "Pule a peça preta movendo para o alvo!",
     start: [3, 0],
     target: [1, 2],
     enemy: [2, 1],
@@ -48,7 +48,7 @@ const SLIDES = [
   {
     id: "dama",
     titulo: "3. Virando Dama",
-    texto: "Arraste até o final do tabuleiro para virar Dama!",
+    texto: "Vá até o final do tabuleiro para virar Dama!",
     start: [1, 2],
     target: [0, 3],
     becomesDama: true,
@@ -56,7 +56,7 @@ const SLIDES = [
   {
     id: "poder",
     titulo: "4. Poder da Dama",
-    texto: "A Dama pula de longe! Arraste e capture.",
+    texto: "A Dama pula de longe! Mova e capture.",
     start: [3, 0],
     startIsDama: true,
     target: [0, 3],
@@ -65,7 +65,7 @@ const SLIDES = [
 ];
 
 // Componente isolado para a Peça Arrastável
-function MiniPeca({ isDama, isDraggable }) {
+function MiniPeca({ isDama, isDraggable, onClick }) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "TUTORIAL_PECA",
     canDrag: () => isDraggable,
@@ -77,6 +77,7 @@ function MiniPeca({ isDama, isDraggable }) {
   return (
     <div
       ref={drag}
+      onClick={onClick}
       className="mini-peca white"
       style={{
         opacity: isDragging ? 0.5 : 1,
@@ -90,11 +91,11 @@ function MiniPeca({ isDama, isDraggable }) {
   );
 }
 
-function MiniCasa({ r, c, isDark, isTarget, onDrop, children }) {
+function MiniCasa({ r, c, isDark, isTarget, isSelected, onDrop, onCasaClick, children }) {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: "TUTORIAL_PECA",
     drop: () => onDrop(r, c),
-    canDrop: () => isTarget, 
+    canDrop: () => isTarget,
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
       canDrop: !!monitor.canDrop(),
@@ -102,12 +103,17 @@ function MiniCasa({ r, c, isDark, isTarget, onDrop, children }) {
   }), [isTarget, r, c, onDrop]);
 
   let bgClass = isDark ? "dark" : "light";
-  if (isOver && canDrop) bgClass = "highlight"; 
+  if (isOver && canDrop) bgClass = "highlight";
 
   return (
-    <div ref={drop} className={`mini-casa ${bgClass}`}>
+    <div 
+      ref={drop} 
+      className={`mini-casa ${bgClass}`}
+      style={isSelected ? { backgroundColor: "#60a0ff" } : {}}
+      onClick={() => onCasaClick && onCasaClick(r, c)}
+    >
       {children}
-      
+
       {isTarget && <div className="mini-target-hint" />}
     </div>
   );
@@ -119,6 +125,7 @@ function InteractiveBoard({ config, onComplete }) {
   const [enemyPos, setEnemyPos] = useState(config.enemy);
   const [isDama, setIsDama] = useState(config.startIsDama);
   const [concluido, setConcluido] = useState(false);
+  const [pecaSelecionada, setPecaSelecionada] = useState(false);
 
   useEffect(() => {
     // #region agent log
@@ -134,6 +141,7 @@ function InteractiveBoard({ config, onComplete }) {
     setEnemyPos(config.enemy);
     setIsDama(config.startIsDama || false);
     setConcluido(false);
+    setPecaSelecionada(false);
   }, [config]);
 
   const handleDrop = (r, c) => {
@@ -150,9 +158,24 @@ function InteractiveBoard({ config, onComplete }) {
       setPecaPos([r, c]);
       setEnemyPos(null);
       if (config.becomesDama) setIsDama(true);
-      
+
       setConcluido(true);
-      setTimeout(() => onComplete(), 400); 
+      setPecaSelecionada(false);
+      setTimeout(() => onComplete(), 400);
+    }
+  };
+
+  const handlePecaClick = () => {
+    if (!concluido) {
+      setPecaSelecionada(!pecaSelecionada);
+    }
+  };
+
+  const handleCasaClick = (r, c) => {
+    if (pecaSelecionada && r === config.target[0] && c === config.target[1]) {
+      handleDrop(r, c);
+    } else if (pecaSelecionada && r === pecaPos[0] && c === pecaPos[1]) {
+      setPecaSelecionada(false);
     }
   };
 
@@ -163,15 +186,18 @@ function InteractiveBoard({ config, onComplete }) {
       const isPeca = pecaPos[0] === r && pecaPos[1] === c;
       const isEnemy = enemyPos && enemyPos[0] === r && enemyPos[1] === c;
       const isTarget = !concluido && config.target[0] === r && config.target[1] === c;
+      const isSelected = isPeca && pecaSelecionada;
 
       grid.push(
-        <MiniCasa 
-          key={`${r}-${c}`} 
-          r={r} 
-          c={c} 
-          isDark={isDark} 
-          isTarget={isTarget} 
+        <MiniCasa
+          key={`${r}-${c}`}
+          r={r}
+          c={c}
+          isDark={isDark}
+          isTarget={isTarget}
+          isSelected={isSelected}
           onDrop={handleDrop}
+          onCasaClick={handleCasaClick}
         >
           {/* Peça Inimiga Estática */}
           <AnimatePresence>
@@ -186,7 +212,13 @@ function InteractiveBoard({ config, onComplete }) {
 
           {/* Peça do Jogador*/}
           {isPeca && (
-            <MiniPeca isDama={isDama} isDraggable={!concluido} />
+            <motion.div layoutId="tutorial-peca" style={{ zIndex: 10 }}>
+              <MiniPeca 
+                isDama={isDama} 
+                isDraggable={!concluido} 
+                onClick={handlePecaClick}
+              />
+            </motion.div>
           )}
         </MiniCasa>
       );
@@ -211,7 +243,7 @@ export default function TutorialModal({ onClose }) {
     } else {
       setDirecao(1);
       setPassoAtual((prev) => prev + 1);
-      setPodeAvancar(false); 
+      setPodeAvancar(false);
     }
   };
 
@@ -266,14 +298,14 @@ export default function TutorialModal({ onClose }) {
               exit="sair"
               className="tutorial-slide-board"
             >
-              
-              <InteractiveBoard 
-                config={slide} 
-                onComplete={() => setPodeAvancar(true)} 
+
+              <InteractiveBoard
+                config={slide}
+                onComplete={() => setPodeAvancar(true)}
               />
-              
+
               <h3 style={{ marginTop: "12px" }}>{slide.titulo}</h3>
-              
+
               <div className="tutorial-instruction">
                 {podeAvancar ? (
                   <motion.p initial={{ scale: 0 }} animate={{ scale: 1 }} className="tutorial-success">
@@ -299,11 +331,11 @@ export default function TutorialModal({ onClose }) {
               VOLTAR
             </button>
           )}
-          
-          <button 
-            onClick={proximoPasso} 
+
+          <button
+            onClick={proximoPasso}
             disabled={!podeAvancar}
-            className={`btn ${!podeAvancar ? 'gray' : isUltimoPasso ? 'green' : 'blue'}`} 
+            className={`btn ${!podeAvancar ? 'gray' : isUltimoPasso ? 'green' : 'blue'}`}
             style={{ flex: 2, opacity: podeAvancar ? 1 : 0.5, cursor: podeAvancar ? "pointer" : "not-allowed" }}
           >
             {isUltimoPasso ? "JOGAR!" : "PRÓXIMO"}

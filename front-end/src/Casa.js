@@ -1,8 +1,10 @@
-export default function Casa({ i, j, isOrigemDica, isDestinoDica, isObrigatoria }) {
+export default function Casa({ i, j, isOrigemDica, isDestinoDica, isObrigatoria, isSelecionada, onClick }) {
   const isDark = (i + j) % 2 !== 0;
 
   let bg;
-  if (isDestinoDica && isDark) {
+  if (isSelecionada) {
+    bg = "#60a0ff"; // Azul para a peça selecionada
+  } else if (isDestinoDica && isDark) {
     bg = "#80cc80"; // Verde indicando possível destino
   } else if (isOrigemDica && isDark) {
     bg = "#ffc040"; // Laranja/Amarelo indicando a peça que pode se mover
@@ -25,6 +27,7 @@ export default function Casa({ i, j, isOrigemDica, isDestinoDica, isObrigatoria 
         transition: "background 0.15s",
         cursor: isDark ? "pointer" : "default",
       }}
+      onClick={() => isDark && onClick && onClick(i, j)}
     >
       {isObrigatoria && <div className="mandatory-overlay" />}
     </div>

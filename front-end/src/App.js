@@ -80,6 +80,8 @@ export default function App() {
   const [boardSize, setBoardSize] = useState(0);
   const [dragState, setDragState] = useState(null);
   const [dropTransition, setDropTransition] = useState(null);
+  const [pecaSelecionada, setPecaSelecionada] = useState(null);
+  const [animatedMove, setAnimatedMove] = useState(null);
   const [sessionId] = useState(() => {
     let id = localStorage.getItem("sessionId");
     if (!id) {
@@ -124,6 +126,7 @@ export default function App() {
     if (tela !== TELAS.JOGO) {
       setJogadasPossiveis([]);
       setConfigJogoAberta(false);
+      setPecaSelecionada(null);
       return;
     }
     if (turno === 1 && !iaPensando) {
@@ -131,6 +134,7 @@ export default function App() {
       return;
     }
     setJogadasPossiveis([]);
+    setPecaSelecionada(null);
   }, [tela, turno, iaPensando, tabuleiro, fetchDicas]);
 
   useEffect(() => {
@@ -172,7 +176,16 @@ export default function App() {
   }, [tela]);
 
   const tileSize = useMemo(() => (boardSize > 0 ? boardSize / 8 : 0), [boardSize]);
-  const interactionLocked = iaPensando || !!dropTransition;
+  const interactionLocked = iaPensando || !!dropTransition || !!animatedMove;
+
+  useEffect(() => {
+    if (animatedMove && animatedMove.progress === 0) {
+      const timer = requestAnimationFrame(() => {
+        setAnimatedMove(prev => prev ? { ...prev, progress: 1 } : null);
+      });
+      return () => cancelAnimationFrame(timer);
+    }
+  }, [animatedMove]);
 
   const boardToPixel = useCallback((i, j) => ({
     x: j * tileSize,
@@ -243,11 +256,12 @@ export default function App() {
         if (!tipo) return;
         if (dragState && dragState.origem[0] === i && dragState.origem[1] === j) return;
         if (dropTransition && dropTransition.origem[0] === i && dropTransition.origem[1] === j) return;
+        if (animatedMove && animatedMove.origem[0] === i && animatedMove.origem[1] === j) return;
         data.push({ id: `${i}-${j}`, tipo, posicao: [i, j] });
       });
     });
     return data;
-  }, [tabuleiro, dragState, dropTransition]);
+  }, [tabuleiro, dragState, dropTransition, animatedMove]);
 
   function tocarSomMovimento() {
     if (!somLigado || !somMovimentoRef.current) return;
@@ -269,15 +283,23 @@ export default function App() {
     const originPx = boardToPixel(i, j);
     const relX = event.clientX - rect.left;
     const relY = event.clientY - rect.top;
+    
+    const wasAlreadySelected = pecaSelecionada && pecaSelecionada[0] === i && pecaSelecionada[1] === j;
+    setPecaSelecionada([i, j]);
+
     setDragState({
       tipo: piece.tipo,
       origem: piece.posicao,
       x: originPx.x,
       y: originPx.y,
+      startX: event.clientX,
+      startY: event.clientY,
       offsetX: relX - originPx.x,
       offsetY: relY - originPx.y,
+      isDraggingMovement: false,
+      wasAlreadySelected,
     });
-  }, [boardToPixel, canDragPiece, tileSize]);
+  }, [boardToPixel, canDragPiece, tileSize, pecaSelecionada]);
 
   useEffect(() => {
     if (!dragState || !boardAreaRef.current) return;
@@ -288,10 +310,15 @@ export default function App() {
       const relY = event.clientY - rect.top;
       setDragState((prev) => {
         if (!prev) return prev;
+        const dx = event.clientX - prev.startX;
+        const dy = event.clientY - prev.startY;
+        const distSq = dx * dx + dy * dy;
+        const isDraggingMovement = prev.isDraggingMovement || distSq > 9;
         return {
           ...prev,
           x: relX - prev.offsetX,
           y: relY - prev.offsetY,
+          isDraggingMovement,
         };
       });
     };
@@ -307,19 +334,27 @@ export default function App() {
       const destinoValido = destinoI >= 0 && destinoI < 8 && destinoJ >= 0 && destinoJ < 8;
       const moveuParaOutraCasa = origem[0] !== destinoI || origem[1] !== destinoJ;
 
-      if (destinoValido && moveuParaOutraCasa) {
-        const destino = [destinoI, destinoJ];
-        const destinoPx = boardToPixel(destinoI, destinoJ);
-        setDropTransition({
-          tipo: dragState.tipo,
-          origem,
-          destino,
-          x: destinoPx.x,
-          y: destinoPx.y,
-        });
-        setDragState(null);
-        moverPecaRef.current?.(origem, destino);
-        return;
+      if (dragState.isDraggingMovement) {
+        if (destinoValido && moveuParaOutraCasa) {
+          const destino = [destinoI, destinoJ];
+          const destinoPx = boardToPixel(destinoI, destinoJ);
+          setDropTransition({
+            tipo: dragState.tipo,
+            origem,
+            destino,
+            x: destinoPx.x,
+            y: destinoPx.y,
+          });
+          setDragState(null);
+          setPecaSelecionada(null);
+          moverPecaRef.current?.(origem, destino);
+          return;
+        }
+        setPecaSelecionada(null);
+      } else {
+        if (dragState.wasAlreadySelected) {
+          setPecaSelecionada(null);
+        }
       }
 
       setDropTransition(null);
@@ -409,8 +444,8 @@ export default function App() {
       });
   }
 
-  async function moverPeca(origem, destino) {
-    if (interactionLocked) return;
+  async function moverPeca(origem, destino, skipLockCheck = false) {
+    if (interactionLocked && !skipLockCheck) return;
     const resposta = await fetch(`${API_URL}/mover`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -596,6 +631,8 @@ export default function App() {
       return;
     }
 
+    let currentTabuleiro = tabuleiro;
+
     for (let i = 0; i < caminho.length - 1; i++) {
       const origem = caminho[i];
       const destino = caminho[i + 1];
@@ -614,7 +651,18 @@ export default function App() {
         return;
       }
 
+      setAnimatedMove({
+        origem,
+        destino,
+        tipo: currentTabuleiro[origem[0]][origem[1]],
+        progress: 0,
+      });
+
+      await esperar(250);
+      setAnimatedMove(null);
+
       tocarSomMovimento();
+      currentTabuleiro = d.tabuleiro;
       setTabuleiro(d.tabuleiro);
       setTurno(d.turno);
       setPecaObrigatoria(d.peca_obrigatoria);
@@ -639,6 +687,28 @@ export default function App() {
     }
     setIaPensando(false);
   }
+
+  const handleCasaClick = useCallback(async (i, j) => {
+    if (!pecaSelecionada || interactionLocked) return;
+    
+    if (pecaSelecionada[0] === i && pecaSelecionada[1] === j) return;
+
+    const origem = pecaSelecionada;
+    const destino = [i, j];
+
+    setAnimatedMove({
+      origem,
+      destino,
+      tipo: tabuleiro[origem[0]][origem[1]],
+      progress: 0,
+    });
+    setPecaSelecionada(null);
+
+    await new Promise(r => setTimeout(r, 250));
+    await moverPecaRef.current(origem, destino, true);
+    setAnimatedMove(null);
+  }, [pecaSelecionada, interactionLocked, tabuleiro]);
+
 
   return (
     <div className="game-root">
@@ -851,6 +921,7 @@ export default function App() {
                         const isOrigemDica = dicaAtiva && jogadasPossiveis.some((move) => move[0][0] === i && move[0][1] === j);
                         const isDestinoDica = dicaAtiva && jogadasPossiveis.some((move) => move[1][0] === i && move[1][1] === j);
                         const isObrigatoria = !!pecaObrigatoria && pecaObrigatoria[0] === i && pecaObrigatoria[1] === j;
+                        const isSelecionada = !!pecaSelecionada && pecaSelecionada[0] === i && pecaSelecionada[1] === j;
                         return (
                           <Casa
                             key={`${i}-${j}`}
@@ -859,6 +930,8 @@ export default function App() {
                             isOrigemDica={isOrigemDica}
                             isDestinoDica={isDestinoDica}
                             isObrigatoria={isObrigatoria}
+                            isSelecionada={isSelecionada}
+                            onClick={handleCasaClick}
                           />
                         );
                       })
@@ -925,6 +998,24 @@ export default function App() {
                         zIndex={5}
                       />
                     )}
+
+                    {animatedMove && (() => {
+                      const pos = animatedMove.progress === 0 
+                        ? boardToPixel(animatedMove.origem[0], animatedMove.origem[1])
+                        : boardToPixel(animatedMove.destino[0], animatedMove.destino[1]);
+                      return (
+                        <Peca
+                          key={`anim-${animatedMove.origem.join("-")}`}
+                          tipo={animatedMove.tipo}
+                          corPeca={corPeca}
+                          x={pos.x}
+                          y={pos.y}
+                          size={tileSize}
+                          animate={true}
+                          zIndex={5}
+                        />
+                      );
+                    })()}
                   </div>
                 </div>
 
