@@ -1,9 +1,9 @@
 import { memo } from "react";
 
 export const GRADIENTES = {
-  red:   "radial-gradient(circle at 35% 30%, #ff8080, #cc2020 60%, #800000)",
+  red: "radial-gradient(circle at 35% 30%, #ff8080, #cc2020 60%, #800000)",
   black: "radial-gradient(circle at 35% 30%, #888, #333 60%, #000)",
-  gold:  "radial-gradient(circle at 35% 30%, #ffe066, #d4a000 60%, #7a5a00)",
+  gold: "radial-gradient(circle at 35% 30%, #ffe066, #d4a000 60%, #7a5a00)",
   white: "radial-gradient(circle at 35% 30%, #fff, #ccc 60%, #888)",
 };
 

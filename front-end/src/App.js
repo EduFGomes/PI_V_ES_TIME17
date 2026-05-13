@@ -21,6 +21,7 @@ const TELAS = {
   JOGO: "jogo",
   VITORIA: "vitoria",
   DERROTA: "derrota",
+  EMPATE: "empate",
 };
 
 const CORES_PECA = ["red", "black", "gold", "white"];
@@ -35,6 +36,20 @@ const TOTAL_PECAS_POR_LADO = 12;
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const X_COORDS = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const Y_COORDS = ["8", "7", "6", "5", "4", "3", "2", "1"];
+
+function formatarMensagemVitoria(msgOriginal, corPeca) {
+  if (!msgOriginal) return "";
+  let nomeUser = (NOMES_CORES_PT[corPeca] || "BRANCAS").toLowerCase();
+  let nomeOponente = corPeca === "black" ? "brancas" : "pretas";
+
+  let msg = msgOriginal
+    .replace(/brancas/ig, "__USER__")
+    .replace(/pretas/ig, "__OPONENTE__")
+    .replace(/__USER__/g, nomeUser)
+    .replace(/__OPONENTE__/g, nomeOponente);
+
+  return msg.charAt(0).toUpperCase() + msg.slice(1);
+}
 
 export default function App() {
   const [tela, setTela] = useState(TELAS.HOME);
@@ -57,9 +72,16 @@ export default function App() {
   const [pecaObrigatoria, setPecaObrigatoria] = useState(null);
   const [adversarioImgErro, setAdversarioImgErro] = useState(false);
   const [configJogoAberta, setConfigJogoAberta] = useState(false);
+  const [mostrarTabuleiroFinal, setMostrarTabuleiroFinal] = useState(false);
+  const [mostrarConfirmacaoDesistir, setMostrarConfirmacaoDesistir] = useState(false);
+  const [mostrarConfirmacaoZerar, setMostrarConfirmacaoZerar] = useState(false);
+  const [mostrarConfirmacaoVoltarMapa, setMostrarConfirmacaoVoltarMapa] = useState(false);
+  const [mensagemAlerta, setMensagemAlerta] = useState("");
   const [boardSize, setBoardSize] = useState(0);
   const [dragState, setDragState] = useState(null);
   const [dropTransition, setDropTransition] = useState(null);
+  const [pecaSelecionada, setPecaSelecionada] = useState(null);
+  const [animatedMove, setAnimatedMove] = useState(null);
   const [sessionId] = useState(() => {
     let id = localStorage.getItem("sessionId");
     if (!id) {
@@ -95,9 +117,16 @@ export default function App() {
   }, [tela, carregarTabuleiro]);
 
   useEffect(() => {
+    if (tela === TELAS.JOGO || tela === TELAS.HOME) {
+      setMostrarTabuleiroFinal(false);
+    }
+  }, [tela]);
+
+  useEffect(() => {
     if (tela !== TELAS.JOGO) {
       setJogadasPossiveis([]);
       setConfigJogoAberta(false);
+      setPecaSelecionada(null);
       return;
     }
     if (turno === 1 && !iaPensando) {
@@ -105,6 +134,7 @@ export default function App() {
       return;
     }
     setJogadasPossiveis([]);
+    setPecaSelecionada(null);
   }, [tela, turno, iaPensando, tabuleiro, fetchDicas]);
 
   useEffect(() => {
@@ -146,7 +176,16 @@ export default function App() {
   }, [tela]);
 
   const tileSize = useMemo(() => (boardSize > 0 ? boardSize / 8 : 0), [boardSize]);
-  const interactionLocked = iaPensando || !!dropTransition;
+  const interactionLocked = iaPensando || !!dropTransition || !!animatedMove;
+
+  useEffect(() => {
+    if (animatedMove && animatedMove.progress === 0) {
+      const timer = requestAnimationFrame(() => {
+        setAnimatedMove(prev => prev ? { ...prev, progress: 1 } : null);
+      });
+      return () => cancelAnimationFrame(timer);
+    }
+  }, [animatedMove]);
 
   const boardToPixel = useCallback((i, j) => ({
     x: j * tileSize,
@@ -156,6 +195,7 @@ export default function App() {
   const canDragPiece = useCallback((tipo, posicao) => {
     const ehBranca = tipo === 1 || tipo === 3;
     return (
+      tela === TELAS.JOGO &&
       !interactionLocked &&
       turno === 1 &&
       ehBranca &&
@@ -164,7 +204,7 @@ export default function App() {
         (posicao[0] === pecaObrigatoria[0] && posicao[1] === pecaObrigatoria[1])
       )
     );
-  }, [interactionLocked, turno, pecaObrigatoria]);
+  }, [tela, interactionLocked, turno, pecaObrigatoria]);
 
   const isCaptureMove = useCallback((origem, destino) => {
     if (!Array.isArray(origem) || !Array.isArray(destino)) return false;
@@ -216,11 +256,12 @@ export default function App() {
         if (!tipo) return;
         if (dragState && dragState.origem[0] === i && dragState.origem[1] === j) return;
         if (dropTransition && dropTransition.origem[0] === i && dropTransition.origem[1] === j) return;
+        if (animatedMove && animatedMove.origem[0] === i && animatedMove.origem[1] === j) return;
         data.push({ id: `${i}-${j}`, tipo, posicao: [i, j] });
       });
     });
     return data;
-  }, [tabuleiro, dragState, dropTransition]);
+  }, [tabuleiro, dragState, dropTransition, animatedMove]);
 
   function tocarSomMovimento() {
     if (!somLigado || !somMovimentoRef.current) return;
@@ -242,15 +283,23 @@ export default function App() {
     const originPx = boardToPixel(i, j);
     const relX = event.clientX - rect.left;
     const relY = event.clientY - rect.top;
+    
+    const wasAlreadySelected = pecaSelecionada && pecaSelecionada[0] === i && pecaSelecionada[1] === j;
+    setPecaSelecionada([i, j]);
+
     setDragState({
       tipo: piece.tipo,
       origem: piece.posicao,
       x: originPx.x,
       y: originPx.y,
+      startX: event.clientX,
+      startY: event.clientY,
       offsetX: relX - originPx.x,
       offsetY: relY - originPx.y,
+      isDraggingMovement: false,
+      wasAlreadySelected,
     });
-  }, [boardToPixel, canDragPiece, tileSize]);
+  }, [boardToPixel, canDragPiece, tileSize, pecaSelecionada]);
 
   useEffect(() => {
     if (!dragState || !boardAreaRef.current) return;
@@ -261,10 +310,15 @@ export default function App() {
       const relY = event.clientY - rect.top;
       setDragState((prev) => {
         if (!prev) return prev;
+        const dx = event.clientX - prev.startX;
+        const dy = event.clientY - prev.startY;
+        const distSq = dx * dx + dy * dy;
+        const isDraggingMovement = prev.isDraggingMovement || distSq > 9;
         return {
           ...prev,
           x: relX - prev.offsetX,
           y: relY - prev.offsetY,
+          isDraggingMovement,
         };
       });
     };
@@ -280,19 +334,27 @@ export default function App() {
       const destinoValido = destinoI >= 0 && destinoI < 8 && destinoJ >= 0 && destinoJ < 8;
       const moveuParaOutraCasa = origem[0] !== destinoI || origem[1] !== destinoJ;
 
-      if (destinoValido && moveuParaOutraCasa) {
-        const destino = [destinoI, destinoJ];
-        const destinoPx = boardToPixel(destinoI, destinoJ);
-        setDropTransition({
-          tipo: dragState.tipo,
-          origem,
-          destino,
-          x: destinoPx.x,
-          y: destinoPx.y,
-        });
-        setDragState(null);
-        moverPecaRef.current?.(origem, destino);
-        return;
+      if (dragState.isDraggingMovement) {
+        if (destinoValido && moveuParaOutraCasa) {
+          const destino = [destinoI, destinoJ];
+          const destinoPx = boardToPixel(destinoI, destinoJ);
+          setDropTransition({
+            tipo: dragState.tipo,
+            origem,
+            destino,
+            x: destinoPx.x,
+            y: destinoPx.y,
+          });
+          setDragState(null);
+          setPecaSelecionada(null);
+          moverPecaRef.current?.(origem, destino);
+          return;
+        }
+        setPecaSelecionada(null);
+      } else {
+        if (dragState.wasAlreadySelected) {
+          setPecaSelecionada(null);
+        }
       }
 
       setDropTransition(null);
@@ -332,11 +394,13 @@ export default function App() {
         .then((ia) => {
           if (ia?.vencedor !== undefined && ia?.vencedor !== null) {
             setIaPensando(false);
-            setVencedorMsg(ia.mensagem_vitoria || "");
+            setVencedorMsg(formatarMensagemVitoria(ia.mensagem_vitoria, corPeca));
             if (ia.vencedor === 1) {
               tocarSomVitoria();
               spawnConfetes();
               setTela(TELAS.VITORIA);
+            } else if (ia.vencedor === 0) {
+              setTela(TELAS.EMPATE);
             } else {
               setTela(TELAS.DERROTA);
             }
@@ -380,8 +444,8 @@ export default function App() {
       });
   }
 
-  async function moverPeca(origem, destino) {
-    if (interactionLocked) return;
+  async function moverPeca(origem, destino, skipLockCheck = false) {
+    if (interactionLocked && !skipLockCheck) return;
     const resposta = await fetch(`${API_URL}/mover`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -403,11 +467,13 @@ export default function App() {
     }
 
     if (d.vencedor !== null) {
-      setVencedorMsg(d.mensagem_vitoria || "");
+      setVencedorMsg(formatarMensagemVitoria(d.mensagem_vitoria, corPeca));
       if (d.vencedor === 1) {
         tocarSomVitoria();
         spawnConfetes();
         setTela(TELAS.VITORIA);
+      } else if (d.vencedor === 0) {
+        setTela(TELAS.EMPATE);
       } else {
         setTela(TELAS.DERROTA);
       }
@@ -442,26 +508,41 @@ export default function App() {
   }
 
   function desistir() {
-    if (window.confirm("Deseja desistir da partida?")) {
-      setVencedorMsg("O adversário venceu desta vez.");
-      setFaseAtual(1);
-      setTela(TELAS.DERROTA);
-    }
+    setMostrarConfirmacaoDesistir(true);
+  }
+
+  function confirmarDesistencia() {
+    setMostrarConfirmacaoDesistir(false);
+    setVencedorMsg("Você desistiu da partida.");
+    setFaseAtual(1);
+    setTela(TELAS.DERROTA);
+  }
+
+  function voltarMapa() {
+    setMostrarConfirmacaoVoltarMapa(true);
+  }
+
+  function confirmarVoltarMapa() {
+    setMostrarConfirmacaoVoltarMapa(false);
+    setTela(TELAS.MAPA);
   }
 
   function resetarProgresso() {
-    if (window.confirm("Tem certeza que deseja apagar todo o seu progresso e voltar para a Fase 1?")) {
-      setFaseAtual(1);
-      setFaseSelecionada(1);
-      localStorage.removeItem("faseAtual");
-      alert("Progresso apagado com sucesso!");
-    }
+    setMostrarConfirmacaoZerar(true);
+  }
+
+  function confirmarZerarProgresso() {
+    setMostrarConfirmacaoZerar(false);
+    setFaseAtual(1);
+    setFaseSelecionada(1);
+    localStorage.removeItem("faseAtual");
+    setMensagemAlerta("Progresso apagado com sucesso!");
   }
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {
-        alert("Não foi possível entrar em modo tela cheia.");
+        setMensagemAlerta("Não foi possível entrar em modo tela cheia.");
       });
     } else {
       if (document.exitFullscreen) {
@@ -550,6 +631,8 @@ export default function App() {
       return;
     }
 
+    let currentTabuleiro = tabuleiro;
+
     for (let i = 0; i < caminho.length - 1; i++) {
       const origem = caminho[i];
       const destino = caminho[i + 1];
@@ -568,19 +651,32 @@ export default function App() {
         return;
       }
 
+      setAnimatedMove({
+        origem,
+        destino,
+        tipo: currentTabuleiro[origem[0]][origem[1]],
+        progress: 0,
+      });
+
+      await esperar(250);
+      setAnimatedMove(null);
+
       tocarSomMovimento();
+      currentTabuleiro = d.tabuleiro;
       setTabuleiro(d.tabuleiro);
       setTurno(d.turno);
       setPecaObrigatoria(d.peca_obrigatoria);
 
       if (d.vencedor !== null) {
         setIaPensando(false);
-        setVencedorMsg(d.mensagem_vitoria || "");
+        setVencedorMsg(formatarMensagemVitoria(d.mensagem_vitoria, corPeca));
 
         if (d.vencedor === 1) {
           tocarSomVitoria();
           spawnConfetes();
           setTela(TELAS.VITORIA);
+        } else if (d.vencedor === 0) {
+          setTela(TELAS.EMPATE);
         } else {
           setTela(TELAS.DERROTA);
         }
@@ -591,6 +687,28 @@ export default function App() {
     }
     setIaPensando(false);
   }
+
+  const handleCasaClick = useCallback(async (i, j) => {
+    if (!pecaSelecionada || interactionLocked) return;
+    
+    if (pecaSelecionada[0] === i && pecaSelecionada[1] === j) return;
+
+    const origem = pecaSelecionada;
+    const destino = [i, j];
+
+    setAnimatedMove({
+      origem,
+      destino,
+      tipo: tabuleiro[origem[0]][origem[1]],
+      progress: 0,
+    });
+    setPecaSelecionada(null);
+
+    await new Promise(r => setTimeout(r, 250));
+    await moverPecaRef.current(origem, destino, true);
+    setAnimatedMove(null);
+  }, [pecaSelecionada, interactionLocked, tabuleiro]);
+
 
   return (
     <div className="game-root">
@@ -751,7 +869,7 @@ export default function App() {
       )}
 
       {/* ── TELA DE JOGO ── */}
-      {tela === TELAS.JOGO && (
+      {(tela === TELAS.JOGO || tela === TELAS.VITORIA || tela === TELAS.DERROTA || tela === TELAS.EMPATE) && (
         <div className="screen game-screen">
           <button
             className="settings-fab"
@@ -803,6 +921,7 @@ export default function App() {
                         const isOrigemDica = dicaAtiva && jogadasPossiveis.some((move) => move[0][0] === i && move[0][1] === j);
                         const isDestinoDica = dicaAtiva && jogadasPossiveis.some((move) => move[1][0] === i && move[1][1] === j);
                         const isObrigatoria = !!pecaObrigatoria && pecaObrigatoria[0] === i && pecaObrigatoria[1] === j;
+                        const isSelecionada = !!pecaSelecionada && pecaSelecionada[0] === i && pecaSelecionada[1] === j;
                         return (
                           <Casa
                             key={`${i}-${j}`}
@@ -811,6 +930,8 @@ export default function App() {
                             isOrigemDica={isOrigemDica}
                             isDestinoDica={isDestinoDica}
                             isObrigatoria={isObrigatoria}
+                            isSelecionada={isSelecionada}
+                            onClick={handleCasaClick}
                           />
                         );
                       })
@@ -877,6 +998,24 @@ export default function App() {
                         zIndex={5}
                       />
                     )}
+
+                    {animatedMove && (() => {
+                      const pos = animatedMove.progress === 0 
+                        ? boardToPixel(animatedMove.origem[0], animatedMove.origem[1])
+                        : boardToPixel(animatedMove.destino[0], animatedMove.destino[1]);
+                      return (
+                        <Peca
+                          key={`anim-${animatedMove.origem.join("-")}`}
+                          tipo={animatedMove.tipo}
+                          corPeca={corPeca}
+                          x={pos.x}
+                          y={pos.y}
+                          size={tileSize}
+                          animate={true}
+                          zIndex={5}
+                        />
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -901,11 +1040,21 @@ export default function App() {
                 <div className="adversary-phase-name">{nomeFase}</div>
                 <div className="adversary-progress">Progresso: Fase {faseAtual}</div>
                 <div className="adversary-actions">
-                  <button className="btn sm" onClick={mostrarDica}>
+                  <button className="btn sm" onClick={mostrarDica} disabled={tela !== TELAS.JOGO}>
                     {dicaAtiva ? "OCULTAR" : "DICA"}
                   </button>
                   <button className="btn blue sm" onClick={reiniciar}>REINICIAR</button>
-                  <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                  {tela === TELAS.JOGO && (
+                    <>
+                      <button className="btn red sm" onClick={desistir}>DESISTIR</button>
+                      <button className="btn gray sm" onClick={voltarMapa}>VOLTAR</button>
+                    </>
+                  )}
+                  {mostrarTabuleiroFinal && (
+                    <button className="btn dark-green sm" style={{ animation: "fadeIn 0.3s" }} onClick={() => setMostrarTabuleiroFinal(false)}>
+                      RESULTADO
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -913,14 +1062,72 @@ export default function App() {
         </div>
       )}
 
+      {/* ── CONFIRMAR DESISTÊNCIA ── */}
+      {mostrarConfirmacaoDesistir && (
+        <div className="game-over-overlay" style={{ zIndex: 9999 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>DESISTIR</div>
+            <div className="panel-sub">Deseja mesmo desistir da partida?</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn red sm" onClick={confirmarDesistencia}>SIM, DESISTIR</button>
+              <button className="btn blue sm" onClick={() => setMostrarConfirmacaoDesistir(false)}>CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRMAR VOLTAR MAPA ── */}
+      {mostrarConfirmacaoVoltarMapa && (
+        <div className="game-over-overlay" style={{ zIndex: 9999 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#333" }}>VOLTAR PARA FASES</div>
+            <div className="panel-sub">Deseja voltar para o mapa de fases?</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn blue sm" onClick={confirmarVoltarMapa}>SIM, VOLTAR</button>
+              <button className="btn red sm" onClick={() => setMostrarConfirmacaoVoltarMapa(false)}>CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRMAR ZERAR PROGRESSO ── */}
+      {mostrarConfirmacaoZerar && (
+        <div className="game-over-overlay" style={{ zIndex: 10000 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>ZERAR PROGRESSO</div>
+            <div className="panel-sub">Tem certeza que deseja apagar todo o seu progresso e voltar para a Fase 1?</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn red sm" onClick={confirmarZerarProgresso}>SIM, APAGAR</button>
+              <button className="btn blue sm" onClick={() => setMostrarConfirmacaoZerar(false)}>CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ALERTA GENÉRICO ── */}
+      {mensagemAlerta && (
+        <div className="game-over-overlay" style={{ zIndex: 10001 }}>
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#333" }}>AVISO</div>
+            <div className="panel-sub">{mensagemAlerta}</div>
+            <div className="btn-row" style={{ marginTop: "24px" }}>
+              <button className="btn blue sm" onClick={() => setMensagemAlerta("")}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── VITÓRIA ── */}
-      {tela === TELAS.VITORIA && (
-        <div className="screen">
+      {tela === TELAS.VITORIA && !mostrarTabuleiroFinal && (
+        <div className="game-over-overlay">
           <div className="panel win-panel">
             <div className="panel-title" style={{ fontSize: 32, color: "#c07800" }}>VITÓRIA</div>
             <div className="trophy">🏆</div>
             <div className="win-sub">VOCÊ VENCEU!</div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
+            </div>
             <div className="btn-row">
               <button
                 className="btn green sm"
@@ -944,14 +1151,16 @@ export default function App() {
       )}
 
       {/* ── DERROTA ── */}
-      {tela === TELAS.DERROTA && (
-        <div className="screen">
+      {tela === TELAS.DERROTA && !mostrarTabuleiroFinal && (
+        <div className="game-over-overlay">
           <div className="panel lose-panel">
             <div className="panel-title" style={{ fontSize: 26, color: "#800" }}>FIM DE JOGO</div>
             <div className="hearts">
             </div>
-            <div className="lose-sub">O ADVERSÁRIO VENCEU DESTA VEZ</div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
+            </div>
             <div className="btn-row">
               <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
               <button
@@ -967,6 +1176,32 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ── EMPATE ── */}
+      {tela === TELAS.EMPATE && !mostrarTabuleiroFinal && (
+        <div className="game-over-overlay">
+          <div className="panel">
+            <div className="panel-title" style={{ fontSize: 26, color: "#555" }}>EMPATE</div>
+            <div className="trophy">🤝</div>
+            {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
+            <div className="btn-row">
+              <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
+            </div>
+            <div className="btn-row">
+              <button className="btn green sm" onClick={reiniciar}>REINICIAR</button>
+              <button
+                className="btn sm"
+                onClick={() => {
+                  setTela(TELAS.HOME);
+                }}
+              >
+                MENU
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

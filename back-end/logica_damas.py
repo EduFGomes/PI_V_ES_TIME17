@@ -6,21 +6,30 @@ class JogoDamas:
         self.tabuleiro = self.criar_tabuleiro_inicial()
         self.turno = 1
         self.peca_obrigatoria = None
+        self.turnos_inativos = 0
     
-    def contar_pecas(self):
-        brancas = 0
-        pretas = 0
+    def contar_tipos_pecas(self):
+        brancas_pedras = 0
+        brancas_damas = 0
+        pretas_pedras = 0
+        pretas_damas = 0
         for linha in self.tabuleiro:
             for casa in linha:
-                if casa in [1, 3]: 
-                    brancas += 1
-                elif casa in [2, 4]: 
-                    pretas += 1
-
-        return brancas, pretas
+                if casa == 1: 
+                    brancas_pedras += 1
+                elif casa == 3: 
+                    brancas_damas += 1
+                elif casa == 2: 
+                    pretas_pedras += 1
+                elif casa == 4: 
+                    pretas_damas += 1
+        return brancas_pedras, brancas_damas, pretas_pedras, pretas_damas
 
     def verificar_vencedor(self):
-        brancas, pretas = self.contar_pecas()
+        bp, bd, pp, pd = self.contar_tipos_pecas()
+        brancas = bp + bd
+        pretas = pp + pd
+        
         if brancas == 0:
             return 2, "Peças pretas venceram!"
         if pretas == 0:
@@ -29,6 +38,21 @@ class JogoDamas:
             return 2, "Brancas sem movimentos! Pretas venceram!"
         if not self.jogador_tem_movimentos(2):
             return 1, "Pretas sem movimentos! Brancas venceram!"
+            
+        limite = 40
+        
+        if bp == 0 and pp == 0:
+            if bd in [1, 2] and pd in [1, 2]:
+                limite = 10
+        elif bp == 0 and pp == 1 and bd in [1, 2] and pd == 1:
+            limite = 10
+        elif pp == 0 and bp == 1 and pd in [1, 2] and bd == 1:
+            limite = 10
+            
+        if self.turnos_inativos >= limite:
+            lances = limite // 2
+            return 0, f"Empate após {lances} lances sem capturas ou movimentos de pedras."
+
         return None, "O jogo continua."
 
     def jogador_tem_movimentos(self, jogador):
@@ -195,6 +219,7 @@ class JogoDamas:
             self.tabuleiro[linha_origem][coluna_origem] = 0
 
             if isinstance(resultado, tuple) and resultado[0] == "Captura":
+                self.turnos_inativos = 0
                 _, linha_meio, coluna_meio = resultado
                 self.tabuleiro[linha_meio][coluna_meio] = 0
 
@@ -207,6 +232,12 @@ class JogoDamas:
                 self.tabuleiro[linha_destino][coluna_destino] = 3
             elif self.turno == 2 and linha_destino == 7 and peca == 2:
                 self.tabuleiro[linha_destino][coluna_destino] = 4
+                
+            if not (isinstance(resultado, tuple) and resultado[0] == "Captura"):
+                if peca in [1, 2]:
+                    self.turnos_inativos = 0
+                else:
+                    self.turnos_inativos += 1
 
             self.peca_obrigatoria = None
             self.turno = 2 if self.turno == 1 else 1
@@ -224,9 +255,6 @@ class JogoDamas:
         # só verifica vitória se jogada foi válida E terminou (não é captura múltipla)
         if sucesso and msg != "Continua":
             vencedor, mensagem_vitoria = self.verificar_vencedor()
-
-            if vencedor:
-                self.resetar_jogo()
 
         return {
             "sucesso": sucesso,
