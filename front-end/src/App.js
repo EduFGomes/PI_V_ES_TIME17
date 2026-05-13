@@ -1182,7 +1182,6 @@ export default function App() {
         <div className="game-over-overlay">
           <div className="panel">
             <div className="panel-title" style={{ fontSize: 26, color: "#555" }}>EMPATE</div>
-            <div className="trophy">🤝</div>
             {vencedorMsg && <div className="panel-sub">{vencedorMsg}</div>}
             <div className="btn-row">
               <button className="btn sm blue" onClick={() => setMostrarTabuleiroFinal(true)}>VER TABULEIRO</button>
