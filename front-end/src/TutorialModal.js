@@ -212,7 +212,7 @@ function InteractiveBoard({ config, onComplete }) {
 
           {/* Peça do Jogador*/}
           {isPeca && (
-            <motion.div layoutId="tutorial-peca" style={{ zIndex: 10 }}>
+            <motion.div layoutId="tutorial-peca" style={{ zIndex: 10, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <MiniPeca 
                 isDama={isDama} 
                 isDraggable={!concluido} 
